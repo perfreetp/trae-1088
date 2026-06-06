@@ -1,29 +1,59 @@
 {
   "surveys": {
-    "test_null": {
-      "name": "test_null",
-      "source_path": "examples\\test_null_values.csv",
+    "学生调查": {
+      "name": "学生调查",
+      "source_path": "examples\\test_complete_data.csv",
       "sheet_name": null,
-      "parquet_path": "E:\\trae-bz\\TraeProjects\\1088\\.surveykit\\surveys\\test_null.parquet",
-      "row_count": 12,
+      "parquet_path": "E:\\trae-bz\\TraeProjects\\1088\\.surveykit\\surveys\\学生调查.parquet",
+      "row_count": 10,
       "columns": [
-        "学号",
         "姓名",
-        "性别",
+        "电话",
         "年龄",
-        "省份",
-        "填写日期",
-        "联系电话",
-        "月生活费",
-        "满意度",
+        "是否学生",
+        "入学日期",
+        "地区",
         "备注"
       ],
       "round_num": null,
       "metadata": {},
-      "added_at": "2026-06-07T03:35:12.050329"
+      "added_at": "2026-06-07T03:49:15.385719"
+    },
+    "学生调查_抽样": {
+      "name": "学生调查_抽样",
+      "source_path": "examples\\test_complete_data.csv",
+      "sheet_name": null,
+      "parquet_path": "E:\\trae-bz\\TraeProjects\\1088\\.surveykit\\surveys\\学生调查_抽样.parquet",
+      "row_count": 5,
+      "columns": [
+        "姓名",
+        "电话",
+        "年龄",
+        "是否学生",
+        "入学日期",
+        "地区",
+        "备注"
+      ],
+      "round_num": null,
+      "metadata": {
+        "sampled_from": "学生调查",
+        "method": "random",
+        "ratio": 0.5,
+        "count": 5
+      },
+      "added_at": "2026-06-07T03:49:15.403857"
     }
   },
-  "interviews": {},
-  "created_at": "2026-06-07T03:34:45.758281",
-  "updated_at": "2026-06-07T03:35:12.050329"
+  "interviews": {
+    "交通出行访谈": {
+      "name": "交通出行访谈",
+      "source_path": "examples\\interview_sample.txt",
+      "text_path": "E:\\trae-bz\\TraeProjects\\1088\\.surveykit\\interviews\\交通出行访谈.txt",
+      "speaker_labels": {},
+      "metadata": {},
+      "added_at": "2026-06-07T03:49:15.034935"
+    }
+  },
+  "created_at": "2026-06-07T03:49:14.949154",
+  "updated_at": "2026-06-07T03:49:15.403857"
 }

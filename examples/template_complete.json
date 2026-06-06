@@ -1,0 +1,52 @@
+{
+  "name": "学生调查模板",
+  "version": "1.0",
+  "description": "用于学生调查问卷的变量定义",
+  "variables": [
+    {
+      "name": "姓名",
+      "required": true,
+      "type": "text",
+      "description": "学生姓名"
+    },
+    {
+      "name": "电话",
+      "required": false,
+      "type": "text",
+      "description": "联系电话"
+    },
+    {
+      "name": "年龄",
+      "required": true,
+      "type": "integer",
+      "min_value": 15,
+      "max_value": 60,
+      "description": "年龄（整数）"
+    },
+    {
+      "name": "是否学生",
+      "required": true,
+      "type": "boolean",
+      "options": ["是", "否", "1", "0", "True", "False", "true", "false"],
+      "description": "是否为在校学生"
+    },
+    {
+      "name": "入学日期",
+      "required": true,
+      "type": "date",
+      "description": "入学日期（有效的日期格式）"
+    },
+    {
+      "name": "地区",
+      "required": false,
+      "type": "text",
+      "description": "所在地区"
+    },
+    {
+      "name": "备注",
+      "required": false,
+      "type": "text",
+      "description": "其他备注信息"
+    }
+  ]
+}

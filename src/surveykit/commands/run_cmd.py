@@ -8,6 +8,7 @@ import pandas as pd
 from ..pipeline import load_pipeline, PipelineExecutor
 from ..models import ProcessLog
 from ..workspace import Workspace
+from ..utils import is_empty
 
 
 @click.group('run')
@@ -109,14 +110,31 @@ def run_delivery(ctx, project: str, round_num: int, output: Path, template: Path
             click.echo(f"  ✓ {survey.name}.xlsx")
     
     if include_interviews:
-        click.echo("\n2. 导出访谈文本...")
+        click.echo("\n2. 导出访谈文本（已按说话人拆分）...")
         for i in interviews:
             interview = ws.get_interview(i['name'])
             if interview:
-                out_path = package_dir / '02_访谈文本' / f"{interview.name}.txt"
-                with open(out_path, 'w', encoding='utf-8') as f:
-                    f.write(interview.content)
-                click.echo(f"  ✓ {interview.name}.txt")
+                from ..utils import split_interview
+                segments = split_interview(interview.content)
+                
+                if segments and len(segments) > 1:
+                    for seg_idx, seg in enumerate(segments):
+                        speaker = seg.get('speaker', '未知')
+                        content = seg.get('content', '')
+                        seg_filename = f"{interview.name}_{speaker}_{seg_idx + 1}.txt"
+                        out_path = package_dir / '02_访谈文本' / seg_filename
+                        with open(out_path, 'w', encoding='utf-8') as f:
+                            f.write(f"访谈: {interview.name}\n")
+                            f.write(f"说话人: {speaker}\n")
+                            f.write(f"段落: {seg_idx + 1}\n")
+                            f.write("=" * 50 + "\n\n")
+                            f.write(content)
+                        click.echo(f"  ✓ {seg_filename}")
+                else:
+                    out_path = package_dir / '02_访谈文本' / f"{interview.name}.txt"
+                    with open(out_path, 'w', encoding='utf-8') as f:
+                        f.write(interview.content)
+                    click.echo(f"  ✓ {interview.name}.txt (原始)")
     
     if template:
         click.echo("\n3. 生成异常清单（按模板）...")
@@ -131,13 +149,23 @@ def run_delivery(ctx, project: str, round_num: int, output: Path, template: Path
                     issue['survey'] = survey.name
                     all_issues.append(issue)
         
+        issues_df = pd.DataFrame(all_issues, columns=['survey', 'type', 'severity', 'column', 'row', 'value', 'message']) if all_issues else pd.DataFrame(
+            columns=['survey', 'type', 'severity', 'column', 'row', 'value', 'message']
+        )
+        out_path = package_dir / '03_质量检查' / '异常清单.xlsx'
+        issues_df.to_excel(out_path, index=False)
+        
         if all_issues:
-            issues_df = pd.DataFrame(all_issues)
-            out_path = package_dir / '03_质量检查' / '异常清单.xlsx'
-            issues_df.to_excel(out_path, index=False)
             click.echo(f"  ✓ 异常清单.xlsx ({len(all_issues)} 条)")
         else:
-            click.echo("  ✓ 无异常")
+            click.echo("  ✓ 异常清单.xlsx (无异常)")
+    else:
+        click.echo("\n3. 生成质量检查说明...")
+        no_template_path = package_dir / '03_质量检查' / '质量检查说明.txt'
+        with open(no_template_path, 'w', encoding='utf-8') as f:
+            f.write("本次交付未提供检查模板，未执行模板验证。\n")
+            f.write("如需质量检查，请在生成交付包时使用 --template 参数指定模板文件。\n")
+        click.echo("  ✓ 质量检查说明.txt")
     
     click.echo("\n4. 生成统计报告...")
     completion_data = []
@@ -146,12 +174,13 @@ def run_delivery(ctx, project: str, round_num: int, output: Path, template: Path
         if survey:
             df = survey.df
             for col in df.columns:
-                completion_rate = df[col].notna().mean()
+                answered_mask = ~df[col].apply(is_empty)
+                completion_rate = answered_mask.mean() if len(df) > 0 else 0
                 completion_data.append({
                     '问卷': survey.name,
                     '题目': col,
                     '总题数': len(df),
-                    '已答题数': int(df[col].notna().sum()),
+                    '已答题数': int(answered_mask.sum()),
                     '完成率': round(completion_rate, 4),
                 })
     

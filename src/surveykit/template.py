@@ -1,5 +1,6 @@
 """题目模板/变量字典处理"""
 import json
+import re
 import pandas as pd
 from pathlib import Path
 from typing import Dict, List, Optional, Any, Tuple
@@ -130,11 +131,63 @@ def _load_csv_template(template_path: Path) -> Template:
     )
 
 
+def _is_empty_value(val: Any) -> bool:
+    """检查值是否为空（None/NaN/空字符串/纯空格）"""
+    if val is None:
+        return True
+    if isinstance(val, float) and pd.isna(val):
+        return True
+    if isinstance(val, str) and val.strip() == '':
+        return True
+    if str(val).strip().lower() in ['nan', 'nat', 'none', 'null']:
+        return True
+    return False
+
+
+def _is_valid_date(val: Any) -> bool:
+    """检查是否为有效日期"""
+    if _is_empty_value(val):
+        return True
+    
+    from .utils import normalize_date
+    normalized = normalize_date(val, return_invalid_as_empty=True)
+    return normalized != '' and str(normalized).strip() != ''
+
+
+def _is_valid_integer(val: Any) -> bool:
+    """检查是否为有效整数"""
+    if _is_empty_value(val):
+        return True
+    
+    if isinstance(val, int):
+        return True
+    
+    if isinstance(val, float):
+        return val.is_integer()
+    
+    val_str = str(val).strip()
+    if re.match(r'^-?\d+$', val_str):
+        return True
+    
+    return False
+
+
+def _is_valid_boolean(val: Any, true_values: List[str], false_values: List[str]) -> bool:
+    """检查是否为有效布尔值"""
+    if _is_empty_value(val):
+        return True
+    
+    val_str = str(val).strip().lower()
+    return val_str in [v.lower() for v in true_values] or val_str in [v.lower() for v in false_values]
+
+
 def validate_with_template(df: pd.DataFrame, template: Template) -> Tuple[List[Dict[str, Any]], pd.DataFrame]:
     """使用模板验证数据
     
     返回: (异常列表, 异常明细DataFrame)
     """
+    import re
+    
     issues = []
     
     template_cols = template.variable_names()
@@ -163,6 +216,9 @@ def validate_with_template(df: pd.DataFrame, template: Template) -> Tuple[List[D
             'message': f"存在额外列: {col}",
         })
     
+    true_values = ['是', '否', 'True', 'False', 'true', 'false', '1', '0', 'T', 'F']
+    false_values = []
+    
     for var in template.variables:
         if var.name not in data_cols:
             continue
@@ -170,7 +226,7 @@ def validate_with_template(df: pd.DataFrame, template: Template) -> Tuple[List[D
         col_data = df[var.name]
         
         if var.required:
-            missing_mask = col_data.isna()
+            missing_mask = col_data.apply(_is_empty_value)
             missing_rows = [i + 2 for i, is_missing in enumerate(missing_mask) if is_missing]
             for row in missing_rows:
                 issues.append({
@@ -182,40 +238,61 @@ def validate_with_template(df: pd.DataFrame, template: Template) -> Tuple[List[D
                     'message': f"必填项缺失: {var.name}",
                 })
         
-        if var.options:
-            valid_values = set(str(o).strip() for o in var.options)
-            valid_values_num = set()
-            for o in var.options:
-                try:
-                    valid_values_num.add(float(o))
-                except (ValueError, TypeError):
-                    pass
-            
+        if var.type == 'date':
             for idx, val in enumerate(col_data):
-                if pd.isna(val):
+                if _is_empty_value(val):
                     continue
                 
-                val_str = str(val).strip()
-                val_num = None
-                try:
-                    val_num = float(val)
-                except (ValueError, TypeError):
-                    pass
-                
-                is_valid = (val_str in valid_values) or (val_num is not None and val_num in valid_values_num)
-                if not is_valid:
+                if not _is_valid_date(val):
                     issues.append({
-                        'type': 'invalid_option',
+                        'type': 'type_mismatch',
                         'severity': 'error',
                         'column': var.name,
                         'row': idx + 2,
-                        'value': val_str,
-                        'message': f"选项越界: {val_str}，允许值: {', '.join(var.options)}",
+                        'value': str(val),
+                        'message': f"日期格式错误: {val}",
                     })
         
-        if var.type in ['number', 'integer']:
+        if var.type == 'integer':
             for idx, val in enumerate(col_data):
-                if pd.isna(val):
+                if _is_empty_value(val):
+                    continue
+                
+                if not _is_valid_integer(val):
+                    issues.append({
+                        'type': 'type_mismatch',
+                        'severity': 'error',
+                        'column': var.name,
+                        'row': idx + 2,
+                        'value': str(val),
+                        'message': f"类型不匹配: 应为整数，实际值: {val}",
+                    })
+                    continue
+                
+                num_val = int(float(val))
+                if var.min_value is not None and num_val < var.min_value:
+                    issues.append({
+                        'type': 'value_out_of_range',
+                        'severity': 'error',
+                        'column': var.name,
+                        'row': idx + 2,
+                        'value': num_val,
+                        'message': f"数值越界: {num_val} < 最小值 {var.min_value}",
+                    })
+                
+                if var.max_value is not None and num_val > var.max_value:
+                    issues.append({
+                        'type': 'value_out_of_range',
+                        'severity': 'error',
+                        'column': var.name,
+                        'row': idx + 2,
+                        'value': num_val,
+                        'message': f"数值越界: {num_val} > 最大值 {var.max_value}",
+                    })
+        
+        if var.type == 'number':
+            for idx, val in enumerate(col_data):
+                if _is_empty_value(val):
                     continue
                 
                 try:
@@ -227,7 +304,7 @@ def validate_with_template(df: pd.DataFrame, template: Template) -> Tuple[List[D
                         'column': var.name,
                         'row': idx + 2,
                         'value': str(val),
-                        'message': f"类型不匹配: 应为{var.type}，实际值: {val}",
+                        'message': f"类型不匹配: 应为数值，实际值: {val}",
                     })
                     continue
                 
@@ -249,6 +326,59 @@ def validate_with_template(df: pd.DataFrame, template: Template) -> Tuple[List[D
                         'row': idx + 2,
                         'value': num_val,
                         'message': f"数值越界: {num_val} > 最大值 {var.max_value}",
+                    })
+        
+        if var.type == 'boolean':
+            valid_true = var.options if var.options else ['是', 'True', '1']
+            valid_false = ['否', 'False', '0'] if not var.options else []
+            
+            for idx, val in enumerate(col_data):
+                if _is_empty_value(val):
+                    continue
+                
+                if not _is_valid_boolean(val, valid_true, valid_false):
+                    issues.append({
+                        'type': 'type_mismatch',
+                        'severity': 'error',
+                        'column': var.name,
+                        'row': idx + 2,
+                        'value': str(val),
+                        'message': f"布尔值错误: {val}，允许值: {', '.join(valid_true + valid_false)}",
+                    })
+        
+        if var.options:
+            valid_values = set(str(o).strip() for o in var.options)
+            valid_values_num = set()
+            for o in var.options:
+                try:
+                    valid_values_num.add(float(o))
+                except (ValueError, TypeError):
+                    pass
+            
+            for idx, val in enumerate(col_data):
+                if _is_empty_value(val):
+                    continue
+                
+                val_str = str(val).strip()
+                val_num = None
+                try:
+                    val_num = float(val)
+                except (ValueError, TypeError):
+                    pass
+                
+                is_valid = (val_str in valid_values) or (val_num is not None and val_num in valid_values_num)
+                
+                if var.type == 'boolean':
+                    is_valid = _is_valid_boolean(val, var.options, [])
+                
+                if not is_valid:
+                    issues.append({
+                        'type': 'invalid_option',
+                        'severity': 'error',
+                        'column': var.name,
+                        'row': idx + 2,
+                        'value': val_str,
+                        'message': f"选项越界: {val_str}，允许值: {', '.join(var.options)}",
                     })
     
     issues_df = pd.DataFrame(issues) if issues else pd.DataFrame(

@@ -54,8 +54,13 @@ def is_empty(value: Any) -> bool:
     return False
 
 
-def normalize_date(date_str: Any) -> Any:
-    """统一日期格式为 YYYY-MM-DD，空值保持为空字符串"""
+def normalize_date(date_str: Any, return_invalid_as_empty: bool = False) -> Any:
+    """统一日期格式为 YYYY-MM-DD，空值保持为空字符串
+    
+    Args:
+        date_str: 日期值
+        return_invalid_as_empty: 无效日期是否返回空（用于验证）
+    """
     if is_empty(date_str):
         return ''
     
@@ -84,6 +89,8 @@ def normalize_date(date_str: Any) -> Any:
         dt = parser.parse(date_str, fuzzy=True)
         return dt.strftime('%Y-%m-%d')
     except (ValueError, TypeError):
+        if return_invalid_as_empty:
+            return ''
         return date_str
 
 
@@ -214,3 +221,45 @@ def load_json(file_path: Path) -> Any:
 def safe_filename(filename: str) -> str:
     """生成安全的文件名"""
     return re.sub(r'[<>:"/\\|?*]', '_', filename)
+
+
+def split_interview(content: str, pattern: str = r'^([^：:：]+)[:：]\s*(.*)$') -> List[Dict[str, Any]]:
+    """拆分访谈逐字稿按说话人
+    
+    返回: [{'speaker': str, 'content': str}, ...]
+    """
+    lines = content.split('\n')
+    segments = []
+    current_speaker = None
+    current_text = []
+    
+    regex = re.compile(pattern)
+    
+    for line in lines:
+        line = line.strip()
+        if not line:
+            continue
+        
+        match = regex.match(line)
+        if match:
+            if current_speaker and current_text:
+                segments.append({
+                    'speaker': current_speaker,
+                    'content': '\n'.join(current_text),
+                })
+                current_text = []
+            
+            current_speaker = match.group(1).strip()
+            text = match.group(2).strip()
+            if text:
+                current_text.append(text)
+        elif current_speaker:
+            current_text.append(line)
+    
+    if current_speaker and current_text:
+        segments.append({
+            'speaker': current_speaker,
+            'content': '\n'.join(current_text),
+        })
+    
+    return segments

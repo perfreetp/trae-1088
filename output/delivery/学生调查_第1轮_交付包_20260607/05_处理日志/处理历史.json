@@ -1,0 +1,39 @@
+[
+  {
+    "timestamp": "20260607_034915",
+    "command": "pipeline 学生调查数据处理流水线",
+    "params": {
+      "steps": 12
+    },
+    "input_files": [
+      "examples\\test_complete_data.csv",
+      "examples\\interview_sample.txt"
+    ],
+    "output_files": [
+      "output/missing_check.xlsx",
+      "output/template_check.xlsx",
+      "output\\学生调查_清洗后.xlsx",
+      "output\\学生调查_抽样.xlsx",
+      "output\\完成率报告.xlsx"
+    ],
+    "changes": [
+      "步骤1: import table - 输入:10行 → 输出:10行",
+      "步骤2: import interview - 输入:11行 → 输出:11行",
+      "步骤3: clean date - 输入:10行 → 输出:10行",
+      "步骤4: clean region - 输入:10行 → 输出:10行",
+      "步骤5: check missing - 输入:10行 → 输出:10行",
+      "步骤6: check template - 输入:10行 → 输出:10行",
+      "步骤7: mask name - 输入:10行 → 输出:10行",
+      "步骤8: mask phone - 输入:10行 → 输出:10行",
+      "步骤9: sample random - 输入:10行 → 输出:5行",
+      "步骤10: export survey - 输入:10行 → 输出:10行",
+      "步骤11: export survey - 输入:5行 → 输出:5行",
+      "步骤12: report completion - 输入:10行 → 输出:10行"
+    ],
+    "input_row_count": null,
+    "output_row_count": null,
+    "modified_columns": [],
+    "affected_rows": null,
+    "operator": "system"
+  }
+]

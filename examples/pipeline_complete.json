@@ -1,0 +1,118 @@
+{
+  "name": "学生调查数据处理流水线",
+  "description": "完整的数据处理流程：导入→清洗→检查→脱敏→抽样→导出",
+  "project_name": "学生调查项目",
+  "output_dir": "output",
+  "steps": [
+    {
+      "command": "import",
+      "subcommand": "table",
+      "description": "导入问卷数据",
+      "params": {
+        "file_path": "examples/test_complete_data.csv",
+        "survey_name": "学生调查"
+      }
+    },
+    {
+      "command": "import",
+      "subcommand": "interview",
+      "description": "导入访谈文本",
+      "params": {
+        "file_path": "examples/interview_sample.txt",
+        "interview_name": "交通出行访谈"
+      }
+    },
+    {
+      "command": "clean",
+      "subcommand": "date",
+      "description": "日期格式标准化",
+      "params": {
+        "survey_name": "学生调查",
+        "columns": ["入学日期"]
+      }
+    },
+    {
+      "command": "clean",
+      "subcommand": "region",
+      "description": "地区名称标准化",
+      "params": {
+        "survey_name": "学生调查",
+        "columns": ["地区"]
+      }
+    },
+    {
+      "command": "check",
+      "subcommand": "missing",
+      "description": "检查缺失值",
+      "params": {
+        "survey_name": "学生调查",
+        "output": "output/missing_check.xlsx"
+      }
+    },
+    {
+      "command": "check",
+      "subcommand": "template",
+      "description": "模板综合检查",
+      "params": {
+        "survey_name": "学生调查",
+        "template_path": "examples/template_complete.json",
+        "output": "output/template_check.xlsx"
+      }
+    },
+    {
+      "command": "mask",
+      "subcommand": "name",
+      "description": "姓名脱敏",
+      "params": {
+        "survey_name": "学生调查",
+        "columns": ["姓名"]
+      }
+    },
+    {
+      "command": "mask",
+      "subcommand": "phone",
+      "description": "电话脱敏",
+      "params": {
+        "survey_name": "学生调查",
+        "columns": ["电话"]
+      }
+    },
+    {
+      "command": "sample",
+      "subcommand": "random",
+      "description": "随机抽样50%",
+      "params": {
+        "survey_name": "学生调查",
+        "ratio": 0.5,
+        "output_survey_name": "学生调查_抽样"
+      }
+    },
+    {
+      "command": "export",
+      "subcommand": "survey",
+      "description": "导出清洗后数据",
+      "params": {
+        "survey_name": "学生调查",
+        "output_path": "output/学生调查_清洗后.xlsx"
+      }
+    },
+    {
+      "command": "export",
+      "subcommand": "survey",
+      "description": "导出抽样数据",
+      "params": {
+        "survey_name": "学生调查_抽样",
+        "output_path": "output/学生调查_抽样.xlsx"
+      }
+    },
+    {
+      "command": "report",
+      "subcommand": "completion",
+      "description": "生成完成率报告",
+      "params": {
+        "survey_name": "学生调查",
+        "output_path": "output/完成率报告.xlsx"
+      }
+    }
+  ]
+}

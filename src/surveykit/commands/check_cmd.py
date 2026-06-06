@@ -6,7 +6,7 @@ from datetime import datetime
 from typing import List, Dict, Any
 
 from ..models import CheckResult, ProcessLog
-from ..utils import generate_id
+from ..utils import generate_id, is_empty
 from ..workspace import Workspace
 
 
@@ -61,16 +61,15 @@ def check_missing(ctx, surveys: tuple, threshold: float, output: Path, show_rows
         click.echo(f"\n检查问卷: {survey.name}")
         
         df = survey.df
-        missing_stats = df.isnull().sum()
-        missing_pct = df.isnull().mean()
         
         issues = []
         has_missing = False
         for col in df.columns:
-            count = missing_stats[col]
-            pct = missing_pct[col]
-            if pct > 0 and pct >= threshold:
-                missing_rows = [i + 2 for i in range(len(df)) if pd.isna(df[col].iloc[i])]
+            missing_mask = df[col].apply(is_empty)
+            count = missing_mask.sum()
+            pct = count / len(df) if len(df) > 0 else 0
+            if count > 0 and pct >= threshold:
+                missing_rows = [i + 2 for i, is_miss in enumerate(missing_mask) if is_miss]
                 issues.append({
                     'column': col,
                     'missing_count': int(count),
