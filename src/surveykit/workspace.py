@@ -133,7 +133,7 @@ class Workspace:
     
     def add_log(self, log: ProcessLog) -> None:
         """添加处理日志"""
-        log_path = self.root / 'logs' / f'{log.timestamp}_{log.command}.json'
+        log_path = self.root / 'logs' / f'{log.timestamp}_{log.command.replace(" ", "_")}.json'
         save_json({
             'timestamp': log.timestamp,
             'command': log.command,
@@ -141,6 +141,11 @@ class Workspace:
             'input_files': log.input_files,
             'output_files': log.output_files,
             'changes': log.changes,
+            'input_row_count': log.input_row_count,
+            'output_row_count': log.output_row_count,
+            'modified_columns': log.modified_columns,
+            'affected_rows': log.affected_rows,
+            'operator': log.operator,
         }, log_path)
     
     def get_export_path(self, filename: str) -> Path:

@@ -59,6 +59,7 @@ from .commands.sample_cmd import sample_group
 from .commands.mask_cmd import mask_group
 from .commands.export_cmd import export_group
 from .commands.report_cmd import report_group
+from .commands.run_cmd import run_group
 
 main.add_command(import_group)
 main.add_command(check_group)
@@ -68,6 +69,7 @@ main.add_command(sample_group)
 main.add_command(mask_group)
 main.add_command(export_group)
 main.add_command(report_group)
+main.add_command(run_group)
 
 
 if __name__ == '__main__':

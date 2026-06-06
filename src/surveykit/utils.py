@@ -38,12 +38,30 @@ def generate_id(*args: str) -> str:
     return hashlib.md5(content.encode()).hexdigest()[:12]
 
 
-def normalize_date(date_str: str) -> str:
-    """统一日期格式为 YYYY-MM-DD"""
-    if not date_str or str(date_str).strip() == '':
+def is_empty(value: Any) -> bool:
+    """判断值是否为空（None、NaN、空字符串、空格）"""
+    import pandas as pd
+    if value is None:
+        return True
+    if isinstance(value, float) and pd.isna(value):
+        return True
+    if isinstance(value, pd.Series):
+        return value.isna().all()
+    if isinstance(value, str) and value.strip() == '':
+        return True
+    if isinstance(value, (list, tuple)) and len(value) == 0:
+        return True
+    return False
+
+
+def normalize_date(date_str: Any) -> Any:
+    """统一日期格式为 YYYY-MM-DD，空值保持为空字符串"""
+    if is_empty(date_str):
         return ''
     
     date_str = str(date_str).strip()
+    if date_str.lower() in ['nan', 'nat', 'none', 'null', '']:
+        return ''
     
     patterns = [
         (r'(\d{4})[-/年.](\d{1,2})[-/月.](\d{1,2})', r'\1-\2-\3'),
@@ -69,12 +87,14 @@ def normalize_date(date_str: str) -> str:
         return date_str
 
 
-def normalize_region(region_str: str, region_map: Optional[Dict[str, str]] = None) -> str:
-    """统一地区名称写法"""
-    if not region_str:
+def normalize_region(region_str: Any, region_map: Optional[Dict[str, str]] = None) -> Any:
+    """统一地区名称写法，空值保持为空字符串"""
+    if is_empty(region_str):
         return ''
     
     region_str = str(region_str).strip()
+    if region_str.lower() in ['nan', 'nat', 'none', 'null', '']:
+        return ''
     
     default_map = {
         '北京': '北京市', '北京市': '北京市', '京': '北京市',
@@ -118,11 +138,15 @@ def normalize_region(region_str: str, region_map: Optional[Dict[str, str]] = Non
     return default_map.get(region_str, region_str)
 
 
-def mask_name(name: str) -> str:
-    """姓名脱敏：保留姓氏，其余用*代替"""
-    if not name:
+def mask_name(name: Any) -> Any:
+    """姓名脱敏：保留姓氏，其余用*代替，空值保持为空字符串"""
+    if is_empty(name):
         return ''
+    
     name = str(name).strip()
+    if name.lower() in ['nan', 'nat', 'none', 'null', '']:
+        return ''
+    
     if len(name) == 1:
         return name
     if len(name) == 2:
@@ -130,22 +154,29 @@ def mask_name(name: str) -> str:
     return name[0] + '*' * (len(name) - 1)
 
 
-def mask_phone(phone: str) -> str:
-    """手机号脱敏：中间4位用*代替"""
-    if not phone:
+def mask_phone(phone: Any) -> Any:
+    """手机号脱敏：中间4位用*代替，空值保持为空字符串"""
+    if is_empty(phone):
         return ''
+    
     phone = str(phone).strip()
+    if phone.lower() in ['nan', 'nat', 'none', 'null', '']:
+        return ''
+    
     phone = re.sub(r'\D', '', phone)
     if len(phone) == 11:
         return phone[:3] + '****' + phone[-4:]
     return phone[:2] + '*' * max(0, len(phone) - 4) + phone[-2:] if len(phone) > 4 else '****'
 
 
-def mask_id_card(id_card: str) -> str:
-    """身份证号脱敏"""
-    if not id_card:
+def mask_id_card(id_card: Any) -> Any:
+    """身份证号脱敏，空值保持为空字符串"""
+    if is_empty(id_card):
         return ''
+    
     id_card = str(id_card).strip()
+    if id_card.lower() in ['nan', 'nat', 'none', 'null', '']:
+        return ''
     if len(id_card) >= 10:
         return id_card[:6] + '*' * (len(id_card) - 10) + id_card[-4:]
     return '*' * len(id_card)

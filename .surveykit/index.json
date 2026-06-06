@@ -1,10 +1,10 @@
 {
   "surveys": {
-    "test_survey": {
-      "name": "test_survey",
-      "source_path": "examples\\sample_survey.csv",
+    "test_null": {
+      "name": "test_null",
+      "source_path": "examples\\test_null_values.csv",
       "sheet_name": null,
-      "parquet_path": "E:\\trae-bz\\TraeProjects\\1088\\.surveykit\\surveys\\test_survey.parquet",
+      "parquet_path": "E:\\trae-bz\\TraeProjects\\1088\\.surveykit\\surveys\\test_null.parquet",
       "row_count": 12,
       "columns": [
         "学号",
@@ -20,19 +20,10 @@
       ],
       "round_num": null,
       "metadata": {},
-      "added_at": "2026-06-07T03:19:12.827583"
+      "added_at": "2026-06-07T03:35:12.050329"
     }
   },
-  "interviews": {
-    "test_interview_sample_interview": {
-      "name": "test_interview_sample_interview",
-      "source_path": "examples\\sample_interview.txt",
-      "text_path": "E:\\trae-bz\\TraeProjects\\1088\\.surveykit\\interviews\\test_interview_sample_interview.txt",
-      "speaker_labels": {},
-      "metadata": {},
-      "added_at": "2026-06-07T03:19:20.693976"
-    }
-  },
-  "created_at": "2026-06-07T03:19:12.585710",
-  "updated_at": "2026-06-07T03:19:20.693976"
+  "interviews": {},
+  "created_at": "2026-06-07T03:34:45.758281",
+  "updated_at": "2026-06-07T03:35:12.050329"
 }

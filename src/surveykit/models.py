@@ -52,3 +52,8 @@ class ProcessLog:
     input_files: List[str]
     output_files: List[str]
     changes: List[str]
+    input_row_count: Optional[int] = None
+    output_row_count: Optional[int] = None
+    modified_columns: List[str] = field(default_factory=list)
+    affected_rows: Optional[int] = None
+    operator: str = 'system'

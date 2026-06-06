@@ -183,28 +183,104 @@ def export_all(ctx, output_dir: Path, format: str):
 @export_group.command('logs')
 @click.option('--output', '-o', type=click.Path(path_type=Path), default=None, help='输出文件路径')
 @click.option('--limit', '-n', type=int, default=50, help='显示最近N条')
+@click.option('--command', '-c', default=None, help='按命令过滤')
+@click.option('--survey', '-s', default=None, help='按问卷名称过滤')
+@click.option('--start', default=None, help='起始时间 (YYYYMMDD_HHMMSS)')
+@click.option('--end', default=None, help='结束时间 (YYYYMMDD_HHMMSS)')
+@click.option('--format', '-f', type=click.Choice(['json', 'xlsx', 'csv']), default='json', help='导出格式')
+@click.option('--verbose', '-v', is_flag=True, help='显示详细信息')
 @click.pass_context
-def export_logs(ctx, output: Path, limit: int):
+def export_logs(ctx, output: Path, limit: int, command: str, survey: str, start: str, end: str, format: str, verbose: bool):
     """查看/导出处理日志
     
+    支持按时间范围、命令类型、问卷名称过滤，可导出为表格
     """
     ws: Workspace = ctx.obj['workspace']
     
     log_dir = ws.root / 'logs'
-    log_files = sorted(log_dir.glob('*.json'), reverse=True)[:limit]
+    log_files = sorted(log_dir.glob('*.json'), reverse=True)
     
     logs = []
     for lf in log_files:
         with open(lf, 'r', encoding='utf-8') as f:
             log = json.load(f)
             logs.append(log)
-            click.echo(f"[{log['timestamp']}] {log['command']}")
+    
+    if command:
+        logs = [l for l in logs if command.lower() in l.get('command', '').lower()]
+    
+    if survey:
+        logs = [l for l in logs if any(survey.lower() in str(c).lower() for c in l.get('changes', []))]
+    
+    if start:
+        logs = [l for l in logs if l.get('timestamp', '') >= start]
+    
+    if end:
+        logs = [l for l in logs if l.get('timestamp', '') <= end]
+    
+    logs = logs[:limit]
+    
+    for log in logs:
+        ts = log.get('timestamp', '')
+        cmd = log.get('command', '')
+        input_rows = log.get('input_row_count', '-')
+        output_rows = log.get('output_row_count', '-')
+        affected = log.get('affected_rows', '-')
+        cols = log.get('modified_columns', [])
+        
+        if verbose:
+            click.echo(f"{'='*50}")
+            click.echo(f"时间: {ts}")
+            click.echo(f"命令: {cmd}")
+            click.echo(f"参数: {log.get('params', {})}")
+            if input_rows != '-':
+                click.echo(f"输入行数: {input_rows}")
+            if output_rows != '-':
+                click.echo(f"输出行数: {output_rows}")
+            if affected != '-':
+                click.echo(f"影响行数: {affected}")
+            if cols:
+                click.echo(f"修改字段: {', '.join(cols)}")
+            click.echo("变更:")
             for change in log.get('changes', []):
                 click.echo(f"  - {change}")
+            click.echo()
+        else:
+            cols_str = f" [{', '.join(cols)}]" if cols else ""
+            rows_str = f" (输入:{input_rows}→输出:{output_rows})" if input_rows != '-' else ""
+            click.echo(f"[{ts}] {cmd}{rows_str}{cols_str}")
+            for change in log.get('changes', [])[:2]:
+                click.echo(f"  - {change}")
+    
+    click.echo(f"\n共 {len(logs)} 条日志记录")
     
     if output and logs:
         out_path = Path(output)
         out_path.parent.mkdir(parents=True, exist_ok=True)
-        with open(out_path, 'w', encoding='utf-8') as f:
-            json.dump(logs, f, ensure_ascii=False, indent=2)
-        click.echo(f"\n日志已导出到: {out_path}")
+        
+        if format == 'json':
+            with open(out_path, 'w', encoding='utf-8') as f:
+                json.dump(logs, f, ensure_ascii=False, indent=2)
+        else:
+            import pandas as pd
+            rows = []
+            for log in logs:
+                row = {
+                    '时间': log.get('timestamp', ''),
+                    '命令': log.get('command', ''),
+                    '参数': json.dumps(log.get('params', {}), ensure_ascii=False),
+                    '输入行数': log.get('input_row_count', ''),
+                    '输出行数': log.get('output_row_count', ''),
+                    '影响行数': log.get('affected_rows', ''),
+                    '修改字段': ', '.join(log.get('modified_columns', [])),
+                    '变更摘要': '; '.join(log.get('changes', [])),
+                }
+                rows.append(row)
+            
+            df = pd.DataFrame(rows)
+            if format == 'xlsx':
+                df.to_excel(out_path, index=False)
+            else:
+                df.to_csv(out_path, index=False, encoding='utf-8-sig')
+        
+        click.echo(f"日志已导出到: {out_path}")

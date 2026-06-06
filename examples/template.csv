@@ -1,0 +1,11 @@
+name,required,type,options,min,max,description,category
+学号,true,string,,,,学生学号,基本信息
+姓名,true,string,,,,学生姓名,基本信息
+性别,true,string,男|女,,,性别,基本信息
+年龄,true,integer,,16,30,年龄,基本信息
+省份,false,string,,,,所在省份,基本信息
+填写日期,true,date,,,,问卷填写日期,元数据
+联系电话,false,string,,,,联系电话,敏感信息
+月生活费,false,number,,0,10000,月生活费(元),消费信息
+满意度,true,integer,1|2|3|4|5,1,5,满意度评分(1-5),态度测量
+备注,false,string,,,,其他备注,开放题

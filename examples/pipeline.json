@@ -1,0 +1,65 @@
+{
+  "name": "问卷数据标准处理流程",
+  "project_name": "大学生生活满意度调查",
+  "round_num": 1,
+  "output_dir": "./output",
+  "steps": [
+    {
+      "command": "import",
+      "subcommand": "table",
+      "params": {
+        "path": "examples/test_null_values.csv",
+        "name": "raw_survey",
+        "round": 1
+      },
+      "description": "导入原始问卷数据"
+    },
+    {
+      "command": "clean",
+      "subcommand": "date",
+      "params": {
+        "survey_id": "raw_survey",
+        "column": "填写日期"
+      },
+      "description": "统一日期格式"
+    },
+    {
+      "command": "clean",
+      "subcommand": "region",
+      "params": {
+        "survey_id": "raw_survey",
+        "column": "省份"
+      },
+      "description": "统一地区名称"
+    },
+    {
+      "command": "mask",
+      "subcommand": "name",
+      "params": {
+        "survey_id": "raw_survey",
+        "column": "姓名"
+      },
+      "description": "姓名脱敏"
+    },
+    {
+      "command": "mask",
+      "subcommand": "phone",
+      "params": {
+        "survey_id": "raw_survey",
+        "column": "联系电话"
+      },
+      "description": "电话脱敏"
+    },
+    {
+      "command": "check",
+      "subcommand": "template",
+      "params": {
+        "survey_id": "raw_survey",
+        "template_path": "examples/template.json",
+        "output": ".surveykit/reports/anomalies.xlsx",
+        "summary": true
+      },
+      "description": "按模板做综合质量检查"
+    }
+  ]
+}

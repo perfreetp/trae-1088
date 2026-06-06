@@ -1,0 +1,85 @@
+{
+  "name": "学生调查问卷模板",
+  "version": "1.0",
+  "description": "大学生生活满意度调查变量字典",
+  "variables": [
+    {
+      "name": "学号",
+      "required": true,
+      "type": "string",
+      "description": "学生学号",
+      "category": "基本信息"
+    },
+    {
+      "name": "姓名",
+      "required": true,
+      "type": "string",
+      "description": "学生姓名",
+      "category": "基本信息"
+    },
+    {
+      "name": "性别",
+      "required": true,
+      "type": "string",
+      "options": ["男", "女"],
+      "description": "性别",
+      "category": "基本信息"
+    },
+    {
+      "name": "年龄",
+      "required": true,
+      "type": "integer",
+      "min": 16,
+      "max": 30,
+      "description": "年龄",
+      "category": "基本信息"
+    },
+    {
+      "name": "省份",
+      "required": false,
+      "type": "string",
+      "description": "所在省份",
+      "category": "基本信息"
+    },
+    {
+      "name": "填写日期",
+      "required": true,
+      "type": "date",
+      "description": "问卷填写日期",
+      "category": "元数据"
+    },
+    {
+      "name": "联系电话",
+      "required": false,
+      "type": "string",
+      "description": "联系电话",
+      "category": "敏感信息"
+    },
+    {
+      "name": "月生活费",
+      "required": false,
+      "type": "number",
+      "min": 0,
+      "max": 10000,
+      "description": "月生活费(元)",
+      "category": "消费信息"
+    },
+    {
+      "name": "满意度",
+      "required": true,
+      "type": "integer",
+      "min": 1,
+      "max": 5,
+      "options": ["1", "2", "3", "4", "5"],
+      "description": "满意度评分(1-5)",
+      "category": "态度测量"
+    },
+    {
+      "name": "备注",
+      "required": false,
+      "type": "string",
+      "description": "其他备注",
+      "category": "开放题"
+    }
+  ]
+}

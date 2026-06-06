@@ -1,0 +1,130 @@
+[
+  {
+    "timestamp": "20260607_033445",
+    "command": "import table",
+    "params": {
+      "path": "examples\\test_null_values.csv",
+      "sheet": null,
+      "round": null
+    },
+    "input_files": [
+      "examples\\test_null_values.csv"
+    ],
+    "output_files": [],
+    "changes": [
+      "导入CSV: examples\\test_null_values.csv -> test_null (12 行, 10 列)"
+    ],
+    "input_row_count": null,
+    "output_row_count": null,
+    "modified_columns": [],
+    "affected_rows": null,
+    "operator": "system"
+  },
+  {
+    "timestamp": "20260607_033509",
+    "command": "mask name",
+    "params": {
+      "survey": "test_null",
+      "column": "姓名",
+      "new_column": null
+    },
+    "input_files": [
+      "examples\\test_null_values.csv"
+    ],
+    "output_files": [],
+    "changes": [
+      "姓名脱敏: 姓名"
+    ],
+    "input_row_count": null,
+    "output_row_count": null,
+    "modified_columns": [],
+    "affected_rows": null,
+    "operator": "system"
+  },
+  {
+    "timestamp": "20260607_033510",
+    "command": "mask phone",
+    "params": {
+      "survey": "test_null",
+      "column": "联系电话",
+      "new_column": null
+    },
+    "input_files": [
+      "examples\\test_null_values.csv"
+    ],
+    "output_files": [],
+    "changes": [
+      "手机号脱敏: 联系电话"
+    ],
+    "input_row_count": null,
+    "output_row_count": null,
+    "modified_columns": [],
+    "affected_rows": null,
+    "operator": "system"
+  },
+  {
+    "timestamp": "20260607_033511",
+    "command": "clean date",
+    "params": {
+      "survey": "test_null",
+      "column": "填写日期",
+      "new_column": null
+    },
+    "input_files": [
+      "examples\\test_null_values.csv"
+    ],
+    "output_files": [],
+    "changes": [
+      "统一日期格式: 填写日期 -> 填写日期"
+    ],
+    "input_row_count": null,
+    "output_row_count": null,
+    "modified_columns": [],
+    "affected_rows": null,
+    "operator": "system"
+  },
+  {
+    "timestamp": "20260607_033512",
+    "command": "clean region",
+    "params": {
+      "survey": "test_null",
+      "column": "省份",
+      "new_column": null
+    },
+    "input_files": [
+      "examples\\test_null_values.csv"
+    ],
+    "output_files": [],
+    "changes": [
+      "统一地区写法: 省份 -> 省份"
+    ],
+    "input_row_count": null,
+    "output_row_count": null,
+    "modified_columns": [],
+    "affected_rows": null,
+    "operator": "system"
+  },
+  {
+    "timestamp": "20260607_033528",
+    "command": "export survey",
+    "params": {
+      "survey": "test_null",
+      "format": "xlsx",
+      "columns": null
+    },
+    "input_files": [
+      "examples\\test_null_values.csv"
+    ],
+    "output_files": [
+      "output\\cleaned_test_null.xlsx"
+    ],
+    "changes": [
+      "导出问卷: test_null -> output\\cleaned_test_null.xlsx"
+    ],
+    "input_row_count": null,
+    "output_row_count": null,
+    "modified_columns": [],
+    "affected_rows": null,
+    "operator": "system"
+  }
+]

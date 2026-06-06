@@ -38,8 +38,9 @@ def load_surveys(ws: Workspace, survey_ids: List[str] = None):
 @click.argument('surveys', nargs=-1, required=False)
 @click.option('--threshold', '-t', type=float, default=0.0, help='缺失率阈值 (0-1)')
 @click.option('--output', '-o', type=click.Path(path_type=Path), default=None, help='输出报告路径')
+@click.option('--show-rows', is_flag=True, help='显示缺失的行号')
 @click.pass_context
-def check_missing(ctx, surveys: tuple, threshold: float, output: Path):
+def check_missing(ctx, surveys: tuple, threshold: float, output: Path, show_rows: bool):
     """检查缺失题目/字段
     
     SURVEYS: 要检查的问卷ID，不指定则检查全部
@@ -64,24 +65,30 @@ def check_missing(ctx, surveys: tuple, threshold: float, output: Path):
         missing_pct = df.isnull().mean()
         
         issues = []
+        has_missing = False
         for col in df.columns:
             count = missing_stats[col]
             pct = missing_pct[col]
-            if pct >= threshold:
+            if pct > 0 and pct >= threshold:
+                missing_rows = [i + 2 for i in range(len(df)) if pd.isna(df[col].iloc[i])]
                 issues.append({
                     'column': col,
                     'missing_count': int(count),
                     'missing_rate': round(pct, 4),
+                    'missing_rows': missing_rows[:20],
+                    'total_missing_rows': len(missing_rows),
                 })
-                if pct > 0:
-                    click.echo(f"  ⚠ {col}: {count} 缺失 ({pct:.1%})")
+                click.echo(f"  ⚠ {col}: {count} 缺失 ({pct:.1%})")
+                if show_rows:
+                    click.echo(f"     行号: {', '.join(map(str, missing_rows[:20]))}{'...' if len(missing_rows) > 20 else ''}")
+                has_missing = True
         
-        if not issues:
-            click.echo("  ✓ 无缺失数据")
+        if not has_missing:
+            click.echo("  ✓ 全部通过，无缺失数据")
         
         result = CheckResult(
             check_type='missing',
-            passed=len([i for i in issues if i['missing_rate'] > 0]) == 0,
+            passed=not has_missing,
             issues=issues,
             summary=f"{survey.name}: {len(issues)} 个字段有缺失",
         )
@@ -95,14 +102,19 @@ def check_missing(ctx, surveys: tuple, threshold: float, output: Path):
             'timestamp': datetime.now().isoformat(),
             'threshold': threshold,
             'surveys': [s.name for s in survey_list],
-            'total_issues': len(all_issues),
+            'total_columns': sum(len(s.df.columns) for s in survey_list),
+            'total_columns_with_issues': len(all_issues),
             'issues': all_issues,
         }
         
         out_path = output or ws.get_report_path('missing_check.json')
         out_path.parent.mkdir(parents=True, exist_ok=True)
-        with open(out_path, 'w', encoding='utf-8') as f:
-            json.dump(report, f, ensure_ascii=False, indent=2)
+        
+        if str(out_path).endswith(('.xlsx', '.xls')):
+            pd.DataFrame(all_issues).to_excel(out_path, index=False)
+        else:
+            with open(out_path, 'w', encoding='utf-8') as f:
+                json.dump(report, f, ensure_ascii=False, indent=2)
         click.echo(f"\n报告已保存: {out_path}")
 
 
@@ -203,11 +215,90 @@ def check_duplicate(ctx, survey_id: str, columns: str, keep: str):
         click.echo(f"  ⚠ 第 {idx + 2} 行: {values}")
 
 
+@check_group.command('template')
+@click.argument('survey_id')
+@click.argument('template_path', type=click.Path(exists=True, path_type=Path))
+@click.option('--output', '-o', type=click.Path(path_type=Path), default=None, help='异常清单输出路径')
+@click.option('--summary', is_flag=True, help='仅显示统计摘要')
+@click.pass_context
+def check_template(ctx, survey_id: str, template_path: Path, output: Path, summary: bool):
+    """按模板一次性检查：缺列、必填缺失、选项越界、数值范围、类型不匹配
+    
+    SURVEY_ID: 问卷ID
+    TEMPLATE_PATH: 模板文件路径 (JSON/CSV)
+    """
+    ws: Workspace = ctx.obj['workspace']
+    preview = ctx.obj['preview']
+    
+    from ..template import load_template, validate_with_template
+    
+    survey = ws.get_survey(survey_id)
+    if not survey:
+        click.echo(f"未找到问卷: {survey_id}")
+        return
+    
+    try:
+        template = load_template(template_path)
+    except Exception as e:
+        click.echo(f"加载模板失败: {e}")
+        return
+    
+    click.echo(f"问卷: {survey.name} ({len(survey.df)} 行)")
+    click.echo(f"模板: {template.name} (v{template.version}, {len(template.variables)} 个变量)")
+    click.echo()
+    
+    issues, issues_df = validate_with_template(survey.df, template)
+    
+    if not issues:
+        click.echo("✅ 全部通过！未发现异常")
+        return
+    
+    error_count = len([i for i in issues if i['severity'] == 'error'])
+    warning_count = len([i for i in issues if i['severity'] == 'warning'])
+    info_count = len([i for i in issues if i['severity'] == 'info'])
+    
+    click.echo(f"发现异常总计: {len(issues)}")
+    click.echo(f"  错误 (Error): {error_count}")
+    click.echo(f"  警告 (Warning): {warning_count}")
+    click.echo(f"  信息 (Info): {info_count}")
+    click.echo()
+    
+    if not summary:
+        type_groups = {}
+        for issue in issues:
+            t = issue['type']
+            if t not in type_groups:
+                type_groups[t] = []
+            type_groups[t].append(issue)
+        
+        for issue_type, type_issues in type_groups.items():
+            click.echo(f"--- {issue_type} ({len(type_issues)} 项) ---")
+            for issue in type_issues[:10]:
+                row_info = f"第{issue['row']}行" if issue['row'] else "全局"
+                val_info = f" 值: {issue['value']}" if issue['value'] else ""
+                click.echo(f"  [{issue['severity'].upper()}] {issue['column']} ({row_info}): {issue['message']}{val_info}")
+            if len(type_issues) > 10:
+                click.echo(f"  ... 还有 {len(type_issues) - 10} 项")
+            click.echo()
+    
+    if output and not preview:
+        out_path = Path(output)
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        
+        if str(out_path).endswith(('.xlsx', '.xls')):
+            issues_df.to_excel(out_path, index=False)
+        else:
+            issues_df.to_csv(out_path, index=False, encoding='utf-8-sig')
+        
+        click.echo(f"异常清单已保存: {out_path}")
+
+
 @check_group.command('all')
 @click.argument('surveys', nargs=-1, required=False)
+@click.option('--template', '-t', type=click.Path(exists=True, path_type=Path), default=None, help='使用模板文件')
 @click.option('--output', '-o', type=click.Path(path_type=Path), default=None, help='输出报告路径')
 @click.pass_context
-def check_all(ctx, surveys: tuple, output: Path):
+def check_all(ctx, surveys: tuple, template: Path, output: Path):
     """运行所有检查
     
     SURVEYS: 要检查的问卷ID，不指定则检查全部
@@ -215,6 +306,13 @@ def check_all(ctx, surveys: tuple, output: Path):
     click.echo("=== 运行全部检查 ===")
     
     click.echo("\n--- 缺失检查 ---")
-    ctx.invoke(check_missing, surveys=surveys, threshold=0.0, output=None)
+    ctx.invoke(check_missing, surveys=surveys, threshold=0.0, output=None, show_rows=False)
+    
+    if template:
+        click.echo("\n--- 模板综合检查 ---")
+        from .check_cmd import load_surveys
+        survey_list = load_surveys(ctx.obj['workspace'], list(surveys) if surveys else None)
+        for survey in survey_list:
+            ctx.invoke(check_template, survey_id=survey.name, template_path=template, output=None, summary=True)
     
     click.echo("\n=== 检查完成 ===")
