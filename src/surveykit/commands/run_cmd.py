@@ -225,7 +225,7 @@ def run_delivery(ctx, project: str, round_num: int, output: Path, template: Path
 
 ## 基本信息
 - 生成时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
-- 问卷轮次: 第{round_num}轮" if round_num else "未指定
+- 问卷轮次: {"第" + str(round_num) + "轮" if round_num else "未指定"}
 - 问卷数量: {len(surveys)} 份
 - 访谈数量: {len(interviews)} 份
 
@@ -244,4 +244,130 @@ def run_delivery(ctx, project: str, round_num: int, output: Path, template: Path
         f.write(readme_content)
     click.echo("  ✓ 00_汇总说明.txt")
     
+    click.echo("\n7. 生成可追溯清单...")
+    manifest = []
+    gen_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    
+    for s in surveys:
+        survey = ws.get_survey(s['name'])
+        if survey:
+            fpath = package_dir / '01_清洗后数据' / f"{survey.name}.xlsx"
+            manifest.append({
+                '文件路径': str(fpath.relative_to(package_dir)),
+                '文件类型': '问卷数据',
+                '生成时间': gen_time,
+                '对应问卷': survey.name,
+                '行数': len(survey.df),
+                '列数': len(survey.df.columns),
+                '用途': '经过清洗和脱敏的问卷原始数据',
+            })
+    
+    for i in interviews:
+        interview = ws.get_interview(i['name'])
+        if interview:
+            from ..utils import split_interview
+            segments = split_interview(interview.content)
+            if segments and len(segments) > 1:
+                for seg_idx, seg in enumerate(segments):
+                    speaker = seg.get('speaker', '未知')
+                    fpath = package_dir / '02_访谈文本' / f"{interview.name}_{speaker}_{seg_idx + 1}.txt"
+                    manifest.append({
+                        '文件路径': str(fpath.relative_to(package_dir)),
+                        '文件类型': '访谈文本',
+                        '生成时间': gen_time,
+                        '对应问卷': interview.name,
+                        '行数': len(seg.get('content', '').splitlines()),
+                        '列数': '',
+                        '用途': f'访谈逐字稿 - {speaker} 发言第{seg_idx + 1}段',
+                    })
+            else:
+                fpath = package_dir / '02_访谈文本' / f"{interview.name}.txt"
+                manifest.append({
+                    '文件路径': str(fpath.relative_to(package_dir)),
+                    '文件类型': '访谈文本',
+                    '生成时间': gen_time,
+                    '对应问卷': interview.name,
+                    '行数': len(interview.content.splitlines()),
+                    '列数': '',
+                    '用途': '访谈逐字稿（原始）',
+                })
+    
+    if template:
+        fpath = package_dir / '03_质量检查' / '异常清单.xlsx'
+        manifest.append({
+            '文件路径': str(fpath.relative_to(package_dir)),
+            '文件类型': '质量检查',
+            '生成时间': gen_time,
+            '对应问卷': '全部问卷',
+            '行数': '',
+            '列数': '',
+            '用途': f'模板验证异常清单（使用模板: {template.name}）',
+        })
+    else:
+        fpath = package_dir / '03_质量检查' / '质量检查说明.txt'
+        manifest.append({
+            '文件路径': str(fpath.relative_to(package_dir)),
+            '文件类型': '质量检查',
+            '生成时间': gen_time,
+            '对应问卷': '',
+            '行数': '',
+            '列数': '',
+            '用途': '质量检查说明（未提供模板）',
+        })
+    
+    fpath = package_dir / '04_统计报告' / '题目完成率.xlsx'
+    manifest.append({
+        '文件路径': str(fpath.relative_to(package_dir)),
+        '文件类型': '统计报告',
+        '生成时间': gen_time,
+        '对应问卷': '全部问卷',
+        '行数': '',
+        '列数': '',
+        '用途': '各题目的完成率统计',
+    })
+    
+    fpath = package_dir / '04_统计报告' / '数据汇总.json'
+    manifest.append({
+        '文件路径': str(fpath.relative_to(package_dir)),
+        '文件类型': '统计报告',
+        '生成时间': gen_time,
+        '对应问卷': '全部问卷',
+        '行数': '',
+        '列数': '',
+        '用途': '项目数据汇总信息',
+    })
+    
+    if all_logs:
+        fpath = package_dir / '05_处理日志' / '处理历史.json'
+        manifest.append({
+            '文件路径': str(fpath.relative_to(package_dir)),
+            '文件类型': '处理日志',
+            '生成时间': gen_time,
+            '对应问卷': '',
+            '行数': len(all_logs),
+            '列数': '',
+            '用途': '所有数据处理操作历史记录',
+        })
+    
+    manifest.append({
+        '文件路径': '00_汇总说明.txt',
+        '文件类型': '说明文档',
+        '生成时间': gen_time,
+        '对应问卷': '',
+        '行数': '',
+        '列数': '',
+        '用途': '交付包整体说明',
+    })
+    
+    manifest_df = pd.DataFrame(manifest, columns=['文件路径', '文件类型', '生成时间', '对应问卷', '行数', '列数', '用途'])
+    manifest_path = package_dir / '00_交付文件清单.xlsx'
+    manifest_df.to_excel(manifest_path, index=False)
+    
+    manifest_csv_path = package_dir / '00_交付文件清单.csv'
+    manifest_df.to_csv(manifest_csv_path, index=False, encoding='utf-8-sig')
+    
+    click.echo("  ✓ 00_交付文件清单.xlsx")
+    click.echo("  ✓ 00_交付文件清单.csv")
+    
     click.echo(f"\n✅ 交付包已生成: {package_dir}")
+    click.echo(f"  共包含 {len(manifest)} 个文件，详见 00_交付文件清单.xlsx")

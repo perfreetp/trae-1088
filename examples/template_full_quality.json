@@ -1,0 +1,60 @@
+{
+  "name": "完整质检模板",
+  "version": "1.0",
+  "description": "包含类型、范围、选项验证的完整模板",
+  "variables": [
+    {
+      "name": "姓名",
+      "required": true,
+      "type": "string",
+      "description": "受访者姓名"
+    },
+    {
+      "name": "电话",
+      "required": true,
+      "type": "string",
+      "description": "联系电话"
+    },
+    {
+      "name": "年龄",
+      "required": true,
+      "type": "integer",
+      "min": 16,
+      "max": 80,
+      "description": "年龄（16-80岁）"
+    },
+    {
+      "name": "是否学生",
+      "required": true,
+      "type": "boolean",
+      "options": ["是", "否"],
+      "description": "是否为在校学生"
+    },
+    {
+      "name": "入学日期",
+      "required": false,
+      "type": "date",
+      "description": "入学日期（YYYY-MM-DD）"
+    },
+    {
+      "name": "地区",
+      "required": false,
+      "type": "string",
+      "description": "所在地区"
+    },
+    {
+      "name": "满意度",
+      "required": true,
+      "type": "integer",
+      "min": 1,
+      "max": 5,
+      "description": "满意度评分（1-5分）"
+    },
+    {
+      "name": "备注",
+      "required": false,
+      "type": "string",
+      "description": "备注信息"
+    }
+  ]
+}

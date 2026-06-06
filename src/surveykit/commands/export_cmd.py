@@ -272,6 +272,25 @@ def export_logs(ctx, output: Path, limit: int, command: str, survey: str, start:
             import pandas as pd
             rows = []
             for log in logs:
+                cmd = log.get('command', '')
+                
+                cols = log.get('modified_columns', [])
+                if cols:
+                    cols_str = ', '.join(cols)
+                else:
+                    if cmd.startswith('sample'):
+                        cols_str = '抽样结果'
+                    elif cmd.startswith('merge'):
+                        cols_str = '合并结果'
+                    elif cmd.startswith('import'):
+                        cols_str = '新增问卷'
+                    elif cmd.startswith('export'):
+                        cols_str = '导出文件'
+                    elif cmd.startswith('check') or cmd.startswith('report'):
+                        cols_str = '无字段修改'
+                    else:
+                        cols_str = '无字段修改'
+                
                 row = {
                     '时间': log.get('timestamp', ''),
                     '命令': log.get('command', ''),
@@ -279,7 +298,7 @@ def export_logs(ctx, output: Path, limit: int, command: str, survey: str, start:
                     '输入行数': log.get('input_row_count', None),
                     '输出行数': log.get('output_row_count', None),
                     '影响行数': log.get('affected_rows', None),
-                    '修改字段': ', '.join(log.get('modified_columns', [])),
+                    '修改字段': cols_str,
                     '变更摘要': '; '.join(log.get('changes', [])),
                 }
                 rows.append(row)

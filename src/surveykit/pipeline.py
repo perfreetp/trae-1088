@@ -222,6 +222,7 @@ class PipelineExecutor:
             ('export', 'survey'): self._handle_export_survey,
             ('export', 'logs'): self._handle_export_logs,
             ('report', 'completion'): self._handle_report_completion,
+            ('report', 'anomalies'): self._handle_report_anomalies,
         }
         
         handler = handlers.get((cmd, sub))
@@ -874,4 +875,89 @@ class PipelineExecutor:
             affected_rows=input_rows,
             output_files=[str(output)],
             messages=[f"生成完成率报告: {len(completion_data)} 个字段"],
+        )
+    
+    def _handle_report_anomalies(self, params: Dict[str, Any]) -> StepResult:
+        """生成异常清单报告"""
+        survey_id = _get_param(params, 'survey_id', 'survey_name')
+        output = Path(_get_param(params, 'output', 'output_path'))
+        numeric_only = params.get('numeric_only', False)
+        zscore = params.get('zscore', 3.0)
+        
+        survey = self._get_survey(survey_id)
+        if not survey:
+            return StepResult(success=False, error=f"未找到问卷: {survey_id}")
+        
+        df = survey.df
+        input_rows = len(df)
+        anomalies = []
+        
+        numeric_cols = df.select_dtypes(include=['number']).columns
+        text_cols = df.select_dtypes(include=['object']).columns
+        
+        for col in numeric_cols:
+            mean = df[col].mean()
+            std = df[col].std()
+            if std == 0 or pd.isna(std):
+                continue
+            
+            for idx, val in enumerate(df[col]):
+                if pd.notna(val):
+                    z = abs((val - mean) / std) if std > 0 else 0
+                    if z > zscore:
+                        anomalies.append({
+                            '问卷名': survey.name,
+                            '字段': col,
+                            '行号': idx + 2,
+                            '异常类型': '数值异常(Z-score)',
+                            '实际值': val,
+                            '说明': f'Z-score={z:.2f}, mean={mean:.2f}, std={std:.2f}',
+                        })
+        
+        if not numeric_only:
+            for col in text_cols:
+                for idx, val in enumerate(df[col]):
+                    if pd.notna(val):
+                        s = str(val)
+                        if len(s) > 500:
+                            anomalies.append({
+                                '问卷名': survey.name,
+                                '字段': col,
+                                '行号': idx + 2,
+                                '异常类型': '文本过长',
+                                '实际值': s[:100] + '...',
+                                '说明': f'长度={len(s)}字符',
+                            })
+        
+        dup_mask = df.duplicated(keep=False)
+        for idx, is_dup in enumerate(dup_mask):
+            if is_dup:
+                anomalies.append({
+                    '问卷名': survey.name,
+                    '字段': '[全局]',
+                    '行号': idx + 2,
+                    '异常类型': '重复行',
+                    '实际值': '',
+                    '说明': '与其他行重复',
+                })
+        
+        output.parent.mkdir(parents=True, exist_ok=True)
+        if anomalies:
+            out_df = pd.DataFrame(anomalies, columns=['问卷名', '字段', '行号', '异常类型', '实际值', '说明'])
+        else:
+            out_df = pd.DataFrame(columns=['问卷名', '字段', '行号', '异常类型', '实际值', '说明'])
+        
+        if output.suffix in ['.xlsx', '.xls']:
+            out_df.to_excel(output, index=False, engine='openpyxl')
+        else:
+            out_df.to_csv(output, index=False, encoding='utf-8-sig')
+        
+        return StepResult(
+            success=True,
+            input_row_count=input_rows,
+            output_row_count=input_rows,
+            modified_columns=[],
+            affected_rows=len(set(a['行号'] for a in anomalies)),
+            output_files=[str(output)],
+            messages=[f"异常清单: {len(anomalies)} 个异常" if anomalies else "异常清单: 无异常"],
         )

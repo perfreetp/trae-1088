@@ -1,0 +1,118 @@
+{
+  "name": "完整质检流程",
+  "project_name": "高校问卷调研项目",
+  "round_num": 1,
+  "output_dir": "output/pipeline_output",
+  "steps": [
+    {
+      "command": "import",
+      "subcommand": "table",
+      "description": "导入原始问卷数据",
+      "params": {
+        "file_path": "examples/test_full_quality.csv",
+        "survey_name": "质检测试数据"
+      }
+    },
+    {
+      "command": "check",
+      "subcommand": "missing",
+      "description": "检查缺失值",
+      "params": {
+        "survey_name": "质检测试数据",
+        "output": "output/pipeline_output/缺失检查.xlsx"
+      }
+    },
+    {
+      "command": "check",
+      "subcommand": "template",
+      "description": "模板综合检查（含范围验证）",
+      "params": {
+        "survey_name": "质检测试数据",
+        "template": "examples/template_full_quality.json",
+        "output": "output/pipeline_output/模板检查.xlsx"
+      }
+    },
+    {
+      "command": "clean",
+      "subcommand": "date",
+      "description": "清洗日期格式",
+      "params": {
+        "survey_name": "质检测试数据",
+        "column": "入学日期"
+      }
+    },
+    {
+      "command": "clean",
+      "subcommand": "region",
+      "description": "标准化地区名称",
+      "params": {
+        "survey_name": "质检测试数据",
+        "column": "地区"
+      }
+    },
+    {
+      "command": "mask",
+      "subcommand": "name",
+      "description": "脱敏姓名",
+      "params": {
+        "survey_name": "质检测试数据",
+        "column": "姓名"
+      }
+    },
+    {
+      "command": "mask",
+      "subcommand": "phone",
+      "description": "脱敏电话",
+      "params": {
+        "survey_name": "质检测试数据",
+        "column": "电话"
+      }
+    },
+    {
+      "command": "report",
+      "subcommand": "completion",
+      "description": "生成完成率报告",
+      "params": {
+        "survey_name": "质检测试数据",
+        "output": "output/pipeline_output/完成率报告.xlsx"
+      }
+    },
+    {
+      "command": "report",
+      "subcommand": "anomalies",
+      "description": "生成异常清单",
+      "params": {
+        "survey_name": "质检测试数据",
+        "output": "output/pipeline_output/异常清单.xlsx"
+      }
+    },
+    {
+      "command": "sample",
+      "subcommand": "random",
+      "description": "随机抽样50%",
+      "params": {
+        "survey_name": "质检测试数据",
+        "ratio": 0.5,
+        "output": "质检测试数据_抽样"
+      }
+    },
+    {
+      "command": "export",
+      "subcommand": "survey",
+      "description": "导出清洗后数据",
+      "params": {
+        "survey_name": "质检测试数据",
+        "output": "output/pipeline_output/清洗后数据.xlsx"
+      }
+    },
+    {
+      "command": "export",
+      "subcommand": "logs",
+      "description": "导出处理日志",
+      "params": {
+        "output": "output/pipeline_output/处理日志.xlsx",
+        "verbose": true
+      }
+    }
+  ]
+}

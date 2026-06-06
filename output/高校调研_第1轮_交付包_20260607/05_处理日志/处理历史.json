@@ -1,0 +1,115 @@
+[
+  {
+    "timestamp": "20260607_041946",
+    "command": "import table",
+    "params": {
+      "path": "examples\\test_full_quality.csv",
+      "sheet": null,
+      "round": null
+    },
+    "input_files": [
+      "examples\\test_full_quality.csv"
+    ],
+    "output_files": [],
+    "changes": [
+      "导入CSV: examples\\test_full_quality.csv -> 质检测试 (12 行, 8 列)"
+    ],
+    "input_row_count": 12,
+    "output_row_count": 12,
+    "modified_columns": [],
+    "affected_rows": 12,
+    "operator": "system"
+  },
+  {
+    "timestamp": "20260607_042026",
+    "command": "clean date",
+    "params": {
+      "survey": "质检测试",
+      "column": "入学日期",
+      "new_column": null
+    },
+    "input_files": [
+      "examples\\test_full_quality.csv"
+    ],
+    "output_files": [],
+    "changes": [
+      "统一日期格式: 入学日期 -> 入学日期, 影响 1 行"
+    ],
+    "input_row_count": 12,
+    "output_row_count": 12,
+    "modified_columns": [
+      "入学日期"
+    ],
+    "affected_rows": 1,
+    "operator": "system"
+  },
+  {
+    "timestamp": "20260607_042027",
+    "command": "clean region",
+    "params": {
+      "survey": "质检测试",
+      "column": "地区",
+      "new_column": null
+    },
+    "input_files": [
+      "examples\\test_full_quality.csv"
+    ],
+    "output_files": [],
+    "changes": [
+      "统一地区写法: 地区 -> 地区, 影响 2 行"
+    ],
+    "input_row_count": 12,
+    "output_row_count": 12,
+    "modified_columns": [
+      "地区"
+    ],
+    "affected_rows": 2,
+    "operator": "system"
+  },
+  {
+    "timestamp": "20260607_042028",
+    "command": "mask name",
+    "params": {
+      "survey": "质检测试",
+      "column": "姓名",
+      "new_column": null
+    },
+    "input_files": [
+      "examples\\test_full_quality.csv"
+    ],
+    "output_files": [],
+    "changes": [
+      "姓名脱敏: 姓名, 影响 12 行"
+    ],
+    "input_row_count": 12,
+    "output_row_count": 12,
+    "modified_columns": [
+      "姓名"
+    ],
+    "affected_rows": 12,
+    "operator": "system"
+  },
+  {
+    "timestamp": "20260607_042029",
+    "command": "mask phone",
+    "params": {
+      "survey": "质检测试",
+      "column": "电话",
+      "new_column": null
+    },
+    "input_files": [
+      "examples\\test_full_quality.csv"
+    ],
+    "output_files": [],
+    "changes": [
+      "手机号脱敏: 电话, 影响 12 行"
+    ],
+    "input_row_count": 12,
+    "output_row_count": 12,
+    "modified_columns": [
+      "电话"
+    ],
+    "affected_rows": 12,
+    "operator": "system"
+  }
+]
