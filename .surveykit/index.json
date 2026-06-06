@@ -1,0 +1,38 @@
+{
+  "surveys": {
+    "test_survey": {
+      "name": "test_survey",
+      "source_path": "examples\\sample_survey.csv",
+      "sheet_name": null,
+      "parquet_path": "E:\\trae-bz\\TraeProjects\\1088\\.surveykit\\surveys\\test_survey.parquet",
+      "row_count": 12,
+      "columns": [
+        "学号",
+        "姓名",
+        "性别",
+        "年龄",
+        "省份",
+        "填写日期",
+        "联系电话",
+        "月生活费",
+        "满意度",
+        "备注"
+      ],
+      "round_num": null,
+      "metadata": {},
+      "added_at": "2026-06-07T03:19:12.827583"
+    }
+  },
+  "interviews": {
+    "test_interview_sample_interview": {
+      "name": "test_interview_sample_interview",
+      "source_path": "examples\\sample_interview.txt",
+      "text_path": "E:\\trae-bz\\TraeProjects\\1088\\.surveykit\\interviews\\test_interview_sample_interview.txt",
+      "speaker_labels": {},
+      "metadata": {},
+      "added_at": "2026-06-07T03:19:20.693976"
+    }
+  },
+  "created_at": "2026-06-07T03:19:12.585710",
+  "updated_at": "2026-06-07T03:19:20.693976"
+}

@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "surveykit"
+version = "0.1.0"
+description = "高校课题组问卷访谈资料整理工具"
+readme = "README.md"
+requires-python = ">=3.9"
+authors = [{ name = "Research Toolkit Team" }]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "click>=8.1.0",
+    "pandas>=2.0.0",
+    "openpyxl>=3.1.0",
+    "python-dateutil>=2.8.0",
+    "chardet>=5.0.0",
+]
+
+[project.scripts]
+surveykit = "surveykit.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
