@@ -19,11 +19,12 @@ def sample_group(ctx):
 
 @sample_group.command('random')
 @click.argument('survey_id')
-@click.option('--count', '-n', type=int, required=True, help='抽样数量')
+@click.option('--count', '-n', type=int, default=None, help='抽样数量')
+@click.option('--ratio', '-r', type=float, default=None, help='抽样比例 (0-1)，与count二选一')
 @click.option('--output', '-o', default=None, help='输出问卷名称')
 @click.option('--seed', type=int, default=None, help='随机种子')
 @click.pass_context
-def sample_random(ctx, survey_id: str, count: int, output: str, seed: int):
+def sample_random(ctx, survey_id: str, count: int, ratio: float, output: str, seed: int):
     """随机抽样
     
     SURVEY_ID: 问卷ID
@@ -37,35 +38,50 @@ def sample_random(ctx, survey_id: str, count: int, output: str, seed: int):
         return
     
     df = survey.df
-    if count >= len(df):
-        click.echo(f"抽样数量 ({count}) >= 总体数量 ({len(df)})，返回全部")
+    input_rows = len(df)
+    
+    if count is None and ratio is None:
+        ratio = 0.1
+    
+    if ratio is not None:
+        count = max(1, int(input_rows * ratio))
+    
+    if count >= input_rows:
+        click.echo(f"抽样数量 ({count}) >= 总体数量 ({input_rows})，返回全部")
         sampled_df = df.copy()
     else:
         sampled_df = df.sample(n=count, random_state=seed)
     
-    click.echo(f"抽样: {len(df)} -> {len(sampled_df)}")
+    output_rows = len(sampled_df)
+    click.echo(f"抽样: {input_rows} -> {output_rows}")
     
-    out_name = output or f"{survey_id}_sample_{count}"
+    out_name = output or f"{survey_id}_sample_{output_rows}"
     
     if not preview:
         sampled_survey = SurveyData(
             name=safe_filename(out_name),
             df=sampled_df,
             source_path=survey.source_path,
-            metadata={'sampled_from': survey_id, 'sample_count': count, 'method': 'random'},
+            metadata={'sampled_from': survey_id, 'sample_count': output_rows, 'method': 'random', 'ratio': ratio},
         )
         ws.add_survey(sampled_survey)
         
         log = ProcessLog(
             timestamp=datetime.now().strftime('%Y%m%d_%H%M%S'),
             command='sample random',
-            params={'survey': survey_id, 'count': count, 'seed': seed},
+            params={'survey': survey_id, 'count': output_rows, 'ratio': ratio, 'seed': seed},
             input_files=[str(survey.source_path)],
             output_files=[],
-            changes=[f"随机抽样: {survey_id} ({len(df)}) -> {out_name} ({len(sampled_df)})"],
+            changes=[f"随机抽样: {survey_id} ({input_rows}行) -> {out_name} ({output_rows}行)"],
+            input_row_count=input_rows,
+            output_row_count=output_rows,
+            modified_columns=[],
+            affected_rows=output_rows,
         )
         ws.add_log(log)
-        click.echo(f"\n已创建抽样问卷: {out_name}{' (预览模式，未保存)' if preview else ''}")
+        click.echo(f"\n已创建抽样问卷: {out_name}")
+    else:
+        click.echo(f"\n(预览模式，未保存)")
 
 
 @sample_group.command('stratified')
@@ -108,6 +124,9 @@ def sample_stratified(ctx, survey_id: str, column: str, ratio: float, count: int
     sampled_df = pd.concat(sampled_parts, ignore_index=True)
     click.echo(f"\n总抽样: {len(df)} -> {len(sampled_df)}")
     
+    input_rows = len(df)
+    output_rows = len(sampled_df)
+    
     out_name = output or f"{survey_id}_stratified_{column}"
     
     if not preview:
@@ -125,10 +144,16 @@ def sample_stratified(ctx, survey_id: str, column: str, ratio: float, count: int
             params={'survey': survey_id, 'column': column, 'ratio': ratio, 'count': count},
             input_files=[str(survey.source_path)],
             output_files=[],
-            changes=[f"分层抽样: {survey_id} -> {out_name} ({len(sampled_df)})"],
+            changes=[f"分层抽样: {survey_id} ({input_rows}行) -> {out_name} ({output_rows}行)"],
+            input_row_count=input_rows,
+            output_row_count=output_rows,
+            modified_columns=[],
+            affected_rows=output_rows,
         )
         ws.add_log(log)
-        click.echo(f"\n已创建抽样问卷: {out_name}{' (预览模式，未保存)' if preview else ''}")
+        click.echo(f"\n已创建抽样问卷: {out_name}")
+    else:
+        click.echo(f"\n(预览模式，未保存)")
 
 
 @sample_group.command('systematic')
@@ -157,6 +182,9 @@ def sample_systematic(ctx, survey_id: str, interval: int, start: int, output: st
     click.echo(f"系统抽样: 间隔 {interval}, 起始 {start}")
     click.echo(f"  {len(df)} -> {len(sampled_df)}")
     
+    input_rows = len(df)
+    output_rows = len(sampled_df)
+    
     out_name = output or f"{survey_id}_systematic_k{interval}"
     
     if not preview:
@@ -174,7 +202,13 @@ def sample_systematic(ctx, survey_id: str, interval: int, start: int, output: st
             params={'survey': survey_id, 'interval': interval, 'start': start},
             input_files=[str(survey.source_path)],
             output_files=[],
-            changes=[f"系统抽样: {survey_id} -> {out_name} ({len(sampled_df)})"],
+            changes=[f"系统抽样: {survey_id} ({input_rows}行) -> {out_name} ({output_rows}行)"],
+            input_row_count=input_rows,
+            output_row_count=output_rows,
+            modified_columns=[],
+            affected_rows=output_rows,
         )
         ws.add_log(log)
-        click.echo(f"\n已创建抽样问卷: {out_name}{' (预览模式，未保存)' if preview else ''}")
+        click.echo(f"\n已创建抽样问卷: {out_name}")
+    else:
+        click.echo(f"\n(预览模式，未保存)")

@@ -43,15 +43,19 @@ def clean_date(ctx, survey_id: str, column: str, new_column: str):
         return
     
     target_col = new_column or column
+    input_rows = len(df)
     changes = []
     
     click.echo(f"转换日期列: {column} -> {target_col}")
+    
+    before = df[column].copy()
     df[target_col] = df[column].apply(lambda x: normalize_date(x))
+    changed_mask = before.astype(str) != df[target_col].astype(str)
+    changed_count = int(changed_mask.sum())
     
-    changed_count = sum(df[target_col] != df[column].astype(str).str.strip()) if target_col == column else len(df)
-    click.echo(f"  共处理 {len(df)} 条记录")
+    click.echo(f"  共处理 {input_rows} 条记录, 影响 {changed_count} 行")
     
-    sample_before = df[column].head(5).tolist()
+    sample_before = before.head(5).tolist()
     sample_after = df[target_col].head(5).tolist()
     click.echo("  示例:")
     for b, a in zip(sample_before, sample_after):
@@ -67,7 +71,7 @@ def clean_date(ctx, survey_id: str, column: str, new_column: str):
             round_num=survey.round_num,
         )
         ws.add_survey(new_survey)
-        changes.append(f"统一日期格式: {column} -> {target_col}")
+        changes.append(f"统一日期格式: {column} -> {target_col}, 影响 {changed_count} 行")
         
         log = ProcessLog(
             timestamp=datetime.now().strftime('%Y%m%d_%H%M%S'),
@@ -76,11 +80,15 @@ def clean_date(ctx, survey_id: str, column: str, new_column: str):
             input_files=[str(survey.source_path)],
             output_files=[],
             changes=changes,
+            input_row_count=input_rows,
+            output_row_count=input_rows,
+            modified_columns=[target_col],
+            affected_rows=changed_count,
         )
         ws.add_log(log)
-        click.echo(f"\n已更新问卷: {survey.name}{' (预览模式，未保存)' if preview else ''}")
+        click.echo(f"\n已更新问卷: {survey.name}")
     else:
-        click.echo(f"\n{' (预览模式，未保存)' if preview else ''}")
+        click.echo(f"\n(预览模式，未保存)")
 
 
 @clean_group.command('region')
@@ -114,13 +122,19 @@ def clean_region(ctx, survey_id: str, column: str, new_column: str, map_file: Pa
             region_map = json.load(f)
     
     target_col = new_column or column
+    input_rows = len(df)
     changes = []
     
     click.echo(f"标准化地区列: {column} -> {target_col}")
-    df[target_col] = df[column].apply(lambda x: normalize_region(x, region_map))
     
-    unique_before = df[column].nunique()
+    before = df[column].copy()
+    df[target_col] = df[column].apply(lambda x: normalize_region(x, region_map))
+    changed_mask = before.astype(str) != df[target_col].astype(str)
+    changed_count = int(changed_mask.sum())
+    
+    unique_before = before.nunique()
     unique_after = df[target_col].nunique()
+    click.echo(f"  共处理 {input_rows} 条记录, 影响 {changed_count} 行")
     click.echo(f"  去重前: {unique_before} 种 -> 去重后: {unique_after} 种")
     
     sample = df[[column, target_col]].drop_duplicates().head(10)
@@ -139,7 +153,7 @@ def clean_region(ctx, survey_id: str, column: str, new_column: str, map_file: Pa
             round_num=survey.round_num,
         )
         ws.add_survey(new_survey)
-        changes.append(f"统一地区写法: {column} -> {target_col}")
+        changes.append(f"统一地区写法: {column} -> {target_col}, 影响 {changed_count} 行")
         
         log = ProcessLog(
             timestamp=datetime.now().strftime('%Y%m%d_%H%M%S'),
@@ -148,9 +162,15 @@ def clean_region(ctx, survey_id: str, column: str, new_column: str, map_file: Pa
             input_files=[str(survey.source_path)],
             output_files=[],
             changes=changes,
+            input_row_count=input_rows,
+            output_row_count=input_rows,
+            modified_columns=[target_col],
+            affected_rows=changed_count,
         )
         ws.add_log(log)
-        click.echo(f"\n已更新问卷: {survey.name}{' (预览模式，未保存)' if preview else ''}")
+        click.echo(f"\n已更新问卷: {survey.name}")
+    else:
+        click.echo(f"\n(预览模式，未保存)")
 
 
 @clean_group.command('rename')
@@ -214,19 +234,23 @@ def clean_whitespace(ctx, survey_id: str, columns: str):
     
     df = survey.df.copy()
     cols = [c.strip() for c in columns.split(',')] if columns else list(df.columns)
+    input_rows = len(df)
     changes = []
+    modified_cols = []
     
-    cleaned_count = 0
+    total_changed = 0
     for col in cols:
         if col in df.columns and df[col].dtype == object:
-            before = df[col].astype(str).str.strip()
+            before = df[col].copy()
             df[col] = df[col].apply(lambda x: x.strip() if isinstance(x, str) else x)
-            cleaned = sum(before != df[col].astype(str))
-            cleaned_count += cleaned
-            if cleaned > 0:
-                click.echo(f"  {col}: 清理了 {cleaned} 处空白")
+            changed_mask = before.astype(str) != df[col].astype(str)
+            changed = int(changed_mask.sum())
+            if changed > 0:
+                total_changed += changed
+                modified_cols.append(col)
+                click.echo(f"  {col}: 清理了 {changed} 处空白")
     
-    click.echo(f"\n共清理 {cleaned_count} 处空白")
+    click.echo(f"\n共处理 {input_rows} 行, 修改 {len(modified_cols)} 列, 影响 {total_changed} 处")
     
     if not preview:
         new_survey = SurveyData(
@@ -238,7 +262,7 @@ def clean_whitespace(ctx, survey_id: str, columns: str):
             round_num=survey.round_num,
         )
         ws.add_survey(new_survey)
-        changes.append(f"清理空白字符: {', '.join(cols)}")
+        changes.append(f"清理空白字符: {', '.join(modified_cols)}, 影响 {total_changed} 处")
         
         log = ProcessLog(
             timestamp=datetime.now().strftime('%Y%m%d_%H%M%S'),
@@ -247,5 +271,9 @@ def clean_whitespace(ctx, survey_id: str, columns: str):
             input_files=[str(survey.source_path)],
             output_files=[],
             changes=changes,
+            input_row_count=input_rows,
+            output_row_count=input_rows,
+            modified_columns=modified_cols,
+            affected_rows=total_changed,
         )
         ws.add_log(log)

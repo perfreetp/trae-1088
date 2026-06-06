@@ -60,7 +60,9 @@ def merge_surveys(ctx, surveys: tuple, output: str, on: str, how: str):
         merged_df = pd.concat(dfs, ignore_index=True)
         click.echo(f"  按行合并: {len(merged_df)} 行")
     
-    click.echo(f"  结果: {len(merged_df)} 行, {len(merged_df.columns)} 列")
+    input_rows = sum(len(s.df) for s in survey_list)
+    output_rows = len(merged_df)
+    click.echo(f"  结果: {output_rows} 行, {len(merged_df.columns)} 列")
     
     if not preview:
         merged_survey = SurveyData(
@@ -77,10 +79,16 @@ def merge_surveys(ctx, surveys: tuple, output: str, on: str, how: str):
             params={'surveys': list(surveys), 'output': output, 'on': on, 'how': how},
             input_files=[str(s.source_path) for s in survey_list],
             output_files=[],
-            changes=[f"合并问卷: {', '.join(surveys)} -> {output}"],
+            changes=[f"合并问卷: {', '.join(surveys)} ({input_rows}行) -> {output} ({output_rows}行)"],
+            input_row_count=input_rows,
+            output_row_count=output_rows,
+            modified_columns=[],
+            affected_rows=output_rows,
         )
         ws.add_log(log)
-        click.echo(f"\n已创建合并问卷: {output}{' (预览模式，未保存)' if preview else ''}")
+        click.echo(f"\n已创建合并问卷: {output}")
+    else:
+        click.echo(f"\n(预览模式，未保存)")
 
 
 @merge_group.command('split-interview')

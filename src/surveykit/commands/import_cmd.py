@@ -91,6 +91,15 @@ def import_table(ctx, path: Path, sheet: str, name: str, round_num: int, encodin
             click.echo(f"  ✗ 导入失败 {f}: {e}")
     
     if not preview and imported:
+        total_rows = 0
+        total_cols = 0
+        for change in changes:
+            import re
+            match = re.search(r'(\d+) 行, (\d+) 列', change)
+            if match:
+                total_rows += int(match.group(1))
+                total_cols += int(match.group(2))
+        
         log = ProcessLog(
             timestamp=datetime.now().strftime('%Y%m%d_%H%M%S'),
             command='import table',
@@ -98,6 +107,10 @@ def import_table(ctx, path: Path, sheet: str, name: str, round_num: int, encodin
             input_files=[str(f) for f in files],
             output_files=[],
             changes=changes,
+            input_row_count=total_rows,
+            output_row_count=total_rows,
+            modified_columns=[],
+            affected_rows=total_rows,
         )
         ws.add_log(log)
     

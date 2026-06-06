@@ -39,7 +39,7 @@ def generate_id(*args: str) -> str:
 
 
 def is_empty(value: Any) -> bool:
-    """判断值是否为空（None、NaN、空字符串、空格）"""
+    """判断值是否为空（None、NaN、空字符串、纯空格、文本None/NaN/nan/null等占位）"""
     import pandas as pd
     if value is None:
         return True
@@ -47,10 +47,19 @@ def is_empty(value: Any) -> bool:
         return True
     if isinstance(value, pd.Series):
         return value.isna().all()
-    if isinstance(value, str) and value.strip() == '':
-        return True
     if isinstance(value, (list, tuple)) and len(value) == 0:
         return True
+    
+    if isinstance(value, str):
+        stripped = value.strip()
+        if stripped == '':
+            return True
+        if stripped.lower() in ['none', 'nan', 'nat', 'null', 'nil', 'na', 'n/a', 'undefined', '']:
+            return True
+    
+    if str(value).strip().lower() in ['none', 'nan', 'nat', 'null', 'nil', 'na', 'n/a', 'undefined', '']:
+        return True
+    
     return False
 
 

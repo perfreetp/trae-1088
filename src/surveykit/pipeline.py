@@ -104,8 +104,10 @@ class PipelineExecutor:
         click.echo()
         
         for i, step in enumerate(self.pipeline.steps, 1):
-            click.echo(f"[{i}/{len(self.pipeline.steps)}] {step.description or f'{step.command} {step.subcommand}'}")
+            step_desc = step.description or f'{step.command} {step.subcommand}'
+            click.echo(f"[{i}/{len(self.pipeline.steps)}] {step_desc}")
             if not self.preview:
+                click.echo(f"  命令: {step.command} {step.subcommand}")
                 click.echo(f"  参数: {step.params}")
             
             result = None
@@ -120,13 +122,33 @@ class PipelineExecutor:
                     for msg in result.messages:
                         click.echo(f"    {msg}")
                 else:
-                    click.echo(f"  ✗ 失败: {result.error}")
+                    click.echo()
+                    click.echo("=" * 60)
+                    click.echo(f"❌ 流水线执行失败！")
+                    click.echo(f"  步骤序号: 第 {i} 步 / 共 {len(self.pipeline.steps)} 步")
+                    click.echo(f"  步骤描述: {step_desc}")
+                    click.echo(f"  命令类型: {step.command} {step.subcommand}")
+                    click.echo(f"  失败原因: {result.error}")
+                    click.echo()
+                    click.echo("  已成功执行的步骤:")
+                    for j in range(i - 1):
+                        prev_step = self.pipeline.steps[j]
+                        click.echo(f"    第{j+1}步: {prev_step.description or f'{prev_step.command} {prev_step.subcommand}'} ✓")
+                    click.echo("=" * 60)
                     return False
                 
             except Exception as e:
-                click.echo(f"  ✗ 异常: {e}")
+                click.echo()
+                click.echo("=" * 60)
+                click.echo(f"❌ 流水线执行异常！")
+                click.echo(f"  步骤序号: 第 {i} 步 / 共 {len(self.pipeline.steps)} 步")
+                click.echo(f"  步骤描述: {step_desc}")
+                click.echo(f"  命令类型: {step.command} {step.subcommand}")
+                click.echo(f"  异常信息: {e}")
+                click.echo()
                 import traceback
                 traceback.print_exc()
+                click.echo("=" * 60)
                 return False
             
             self.step_results.append(result)
@@ -217,10 +239,22 @@ class PipelineExecutor:
         name = _get_param(params, 'name', 'survey_name') or path.stem
         round_num = _get_param(params, 'round', 'round_num')
         
-        if path.suffix.lower() in ['.xlsx', '.xls']:
-            df = pd.read_excel(path)
-        else:
-            df = pd.read_csv(path, encoding=params.get('encoding', 'utf-8-sig'))
+        if not path.exists():
+            return StepResult(
+                success=False,
+                error=f"文件不存在: {path}",
+            )
+        
+        try:
+            if path.suffix.lower() in ['.xlsx', '.xls']:
+                df = pd.read_excel(path)
+            else:
+                df = pd.read_csv(path, encoding=params.get('encoding', 'utf-8-sig'))
+        except Exception as e:
+            return StepResult(
+                success=False,
+                error=f"读取文件失败: {path}, 原因: {e}",
+            )
         
         survey = SurveyData(
             name=name,
@@ -290,6 +324,13 @@ class PipelineExecutor:
         if not survey:
             return StepResult(success=False, error=f"未找到问卷: {survey_id}")
         
+        for col in columns:
+            if col not in survey.df.columns:
+                return StepResult(
+                    success=False,
+                    error=f"列不存在: '{col}'，问卷 '{survey_id}' 的可用列: {', '.join(survey.df.columns)}",
+                )
+        
         df = survey.df.copy()
         input_rows = len(df)
         total_changed = 0
@@ -330,6 +371,13 @@ class PipelineExecutor:
         survey = self._get_survey(survey_id)
         if not survey:
             return StepResult(success=False, error=f"未找到问卷: {survey_id}")
+        
+        for col in columns:
+            if col not in survey.df.columns:
+                return StepResult(
+                    success=False,
+                    error=f"列不存在: '{col}'，问卷 '{survey_id}' 的可用列: {', '.join(survey.df.columns)}",
+                )
         
         df = survey.df.copy()
         input_rows = len(df)
@@ -413,6 +461,13 @@ class PipelineExecutor:
         if not survey:
             return StepResult(success=False, error=f"未找到问卷: {survey_id}")
         
+        for col in columns:
+            if col not in survey.df.columns:
+                return StepResult(
+                    success=False,
+                    error=f"列不存在: '{col}'，问卷 '{survey_id}' 的可用列: {', '.join(survey.df.columns)}",
+                )
+        
         df = survey.df.copy()
         input_rows = len(df)
         total_changed = 0
@@ -453,6 +508,13 @@ class PipelineExecutor:
         survey = self._get_survey(survey_id)
         if not survey:
             return StepResult(success=False, error=f"未找到问卷: {survey_id}")
+        
+        for col in columns:
+            if col not in survey.df.columns:
+                return StepResult(
+                    success=False,
+                    error=f"列不存在: '{col}'，问卷 '{survey_id}' 的可用列: {', '.join(survey.df.columns)}",
+                )
         
         df = survey.df.copy()
         input_rows = len(df)
@@ -587,7 +649,13 @@ class PipelineExecutor:
         if not survey:
             return StepResult(success=False, error=f"未找到问卷: {survey_id}")
         
-        template = load_template(template_path)
+        if not template_path.exists():
+            return StepResult(success=False, error=f"模板文件不存在: {template_path}")
+        
+        try:
+            template = load_template(template_path)
+        except Exception as e:
+            return StepResult(success=False, error=f"加载模板失败: {template_path}, 原因: {e}")
         issues, issues_df = validate_with_template(survey.df, template)
         
         if output:

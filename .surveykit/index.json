@@ -1,11 +1,11 @@
 {
   "surveys": {
-    "学生调查": {
-      "name": "学生调查",
-      "source_path": "examples\\test_complete_data.csv",
+    "完整测试": {
+      "name": "完整测试",
+      "source_path": "examples\\test_empty_placeholders.csv",
       "sheet_name": null,
-      "parquet_path": "E:\\trae-bz\\TraeProjects\\1088\\.surveykit\\surveys\\学生调查.parquet",
-      "row_count": 10,
+      "parquet_path": "E:\\trae-bz\\TraeProjects\\1088\\.surveykit\\surveys\\完整测试.parquet",
+      "row_count": 12,
       "columns": [
         "姓名",
         "电话",
@@ -17,14 +17,14 @@
       ],
       "round_num": null,
       "metadata": {},
-      "added_at": "2026-06-07T03:49:15.385719"
+      "added_at": "2026-06-07T04:09:16.493184"
     },
-    "学生调查_抽样": {
-      "name": "学生调查_抽样",
-      "source_path": "examples\\test_complete_data.csv",
+    "完整测试_抽样": {
+      "name": "完整测试_抽样",
+      "source_path": "examples\\test_empty_placeholders.csv",
       "sheet_name": null,
-      "parquet_path": "E:\\trae-bz\\TraeProjects\\1088\\.surveykit\\surveys\\学生调查_抽样.parquet",
-      "row_count": 5,
+      "parquet_path": "E:\\trae-bz\\TraeProjects\\1088\\.surveykit\\surveys\\完整测试_抽样.parquet",
+      "row_count": 6,
       "columns": [
         "姓名",
         "电话",
@@ -36,24 +36,34 @@
       ],
       "round_num": null,
       "metadata": {
-        "sampled_from": "学生调查",
+        "sampled_from": "完整测试",
+        "sample_count": 6,
         "method": "random",
-        "ratio": 0.5,
-        "count": 5
+        "ratio": 0.5
       },
-      "added_at": "2026-06-07T03:49:15.403857"
-    }
-  },
-  "interviews": {
-    "交通出行访谈": {
-      "name": "交通出行访谈",
-      "source_path": "examples\\interview_sample.txt",
-      "text_path": "E:\\trae-bz\\TraeProjects\\1088\\.surveykit\\interviews\\交通出行访谈.txt",
-      "speaker_labels": {},
+      "added_at": "2026-06-07T04:09:17.282306"
+    },
+    "测试数据": {
+      "name": "测试数据",
+      "source_path": "examples\\test_empty_placeholders.csv",
+      "sheet_name": null,
+      "parquet_path": "E:\\trae-bz\\TraeProjects\\1088\\.surveykit\\surveys\\测试数据.parquet",
+      "row_count": 12,
+      "columns": [
+        "姓名",
+        "电话",
+        "年龄",
+        "是否学生",
+        "入学日期",
+        "地区",
+        "备注"
+      ],
+      "round_num": null,
       "metadata": {},
-      "added_at": "2026-06-07T03:49:15.034935"
+      "added_at": "2026-06-07T04:11:16.354096"
     }
   },
-  "created_at": "2026-06-07T03:49:14.949154",
-  "updated_at": "2026-06-07T03:49:15.403857"
+  "interviews": {},
+  "created_at": "2026-06-07T04:08:45.635234",
+  "updated_at": "2026-06-07T04:11:16.354096"
 }

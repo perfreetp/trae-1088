@@ -1,0 +1,108 @@
+{
+  "name": "完整数据处理流水线",
+  "description": "正常配置的完整数据处理流程",
+  "project_name": "空值测试项目",
+  "output_dir": "output",
+  "steps": [
+    {
+      "command": "import",
+      "subcommand": "table",
+      "description": "导入包含各种空值的测试数据",
+      "params": {
+        "file_path": "examples/test_empty_placeholders.csv",
+        "survey_name": "空值测试问卷"
+      }
+    },
+    {
+      "command": "import",
+      "subcommand": "interview",
+      "description": "导入访谈文本",
+      "params": {
+        "file_path": "examples/interview_sample.txt",
+        "interview_name": "测试访谈"
+      }
+    },
+    {
+      "command": "check",
+      "subcommand": "missing",
+      "description": "检查缺失值",
+      "params": {
+        "survey_name": "空值测试问卷",
+        "output": "output/missing_check_result.xlsx"
+      }
+    },
+    {
+      "command": "clean",
+      "subcommand": "date",
+      "description": "标准化入学日期",
+      "params": {
+        "survey_name": "空值测试问卷",
+        "column": "入学日期"
+      }
+    },
+    {
+      "command": "clean",
+      "subcommand": "region",
+      "description": "标准化地区",
+      "params": {
+        "survey_name": "空值测试问卷",
+        "column": "地区"
+      }
+    },
+    {
+      "command": "mask",
+      "subcommand": "name",
+      "description": "姓名脱敏",
+      "params": {
+        "survey_name": "空值测试问卷",
+        "column": "姓名"
+      }
+    },
+    {
+      "command": "mask",
+      "subcommand": "phone",
+      "description": "电话脱敏",
+      "params": {
+        "survey_name": "空值测试问卷",
+        "column": "电话"
+      }
+    },
+    {
+      "command": "sample",
+      "subcommand": "random",
+      "description": "随机抽样50%",
+      "params": {
+        "survey_name": "空值测试问卷",
+        "ratio": 0.5,
+        "output_survey_name": "空值测试问卷_抽样"
+      }
+    },
+    {
+      "command": "export",
+      "subcommand": "survey",
+      "description": "导出清洗后数据",
+      "params": {
+        "survey_name": "空值测试问卷",
+        "output_path": "output/空值测试问卷_清洗后.xlsx"
+      }
+    },
+    {
+      "command": "export",
+      "subcommand": "survey",
+      "description": "导出抽样数据",
+      "params": {
+        "survey_name": "空值测试问卷_抽样",
+        "output_path": "output/空值测试问卷_抽样.xlsx"
+      }
+    },
+    {
+      "command": "report",
+      "subcommand": "completion",
+      "description": "生成完成率报告",
+      "params": {
+        "survey_name": "空值测试问卷",
+        "output_path": "output/完成率报告.xlsx"
+      }
+    }
+  ]
+}

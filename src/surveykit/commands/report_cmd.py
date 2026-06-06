@@ -6,6 +6,7 @@ from datetime import datetime
 import json
 
 from ..models import ProcessLog
+from ..utils import is_empty
 from ..workspace import Workspace
 
 
@@ -42,28 +43,30 @@ def report_completion(ctx, surveys: tuple, output: Path, threshold: float):
         click.echo(f"\n问卷: {survey.name} ({survey.row_count} 份)")
         
         df = survey.df
-        completion_rates = df.notna().mean()
         
         low_completion = []
         click.echo("  各题目完成率:")
         for col in df.columns:
-            rate = completion_rates[col]
+            answered_mask = ~df[col].apply(is_empty)
+            answered_count = int(answered_mask.sum())
+            rate = answered_count / len(df) if len(df) > 0 else 0
             status = "✓" if rate >= threshold else "⚠"
-            click.echo(f"    {status} {col}: {rate:.1%}")
+            click.echo(f"    {status} {col}: {rate:.1%} (已答: {answered_count}/{len(df)})")
             
             all_results.append({
                 'survey': survey.name,
                 'column': col,
                 'completion_rate': round(rate, 4),
                 'total_count': len(df),
-                'answered_count': int(df[col].notna().sum()),
+                'answered_count': answered_count,
                 'passed': rate >= threshold,
             })
             
             if rate < threshold:
                 low_completion.append({'column': col, 'rate': round(rate, 4)})
         
-        overall_rate = df.notna().all(axis=1).mean()
+        full_answer_mask = ~df.apply(lambda row: all(is_empty(v) for v in row), axis=1)
+        overall_rate = full_answer_mask.mean() if len(df) > 0 else 0
         click.echo(f"\n  完整答卷率: {overall_rate:.1%}")
     
     if output and not preview:
@@ -126,11 +129,12 @@ def report_anomalies(ctx, survey_id: str, output: Path, numeric_only: bool, zsco
                 z = abs((val - mean) / std) if std > 0 else 0
                 if z > zscore:
                     anomalies.append({
-                        'row': idx + 2,
-                        'column': col,
-                        'value': val,
-                        'type': 'outlier_zscore',
-                        'detail': f'Z-score={z:.2f}, mean={mean:.2f}, std={std:.2f}',
+                        '问卷名': survey.name,
+                        '字段': col,
+                        '行号': idx + 2,
+                        '异常类型': '数值异常(Z-score)',
+                        '实际值': val,
+                        '说明': f'Z-score={z:.2f}, mean={mean:.2f}, std={std:.2f}',
                     })
     
     if not numeric_only:
@@ -140,37 +144,46 @@ def report_anomalies(ctx, survey_id: str, output: Path, numeric_only: bool, zsco
                     s = str(val)
                     if len(s) > 500:
                         anomalies.append({
-                            'row': idx + 2,
-                            'column': col,
-                            'value': s[:100] + '...',
-                            'type': 'long_text',
-                            'detail': f'长度={len(s)}字符',
+                            '问卷名': survey.name,
+                            '字段': col,
+                            '行号': idx + 2,
+                            '异常类型': '文本过长',
+                            '实际值': s[:100] + '...',
+                            '说明': f'长度={len(s)}字符',
                         })
     
     dup_mask = df.duplicated(keep=False)
     for idx, is_dup in enumerate(dup_mask):
         if is_dup:
             anomalies.append({
-                'row': idx + 2,
-                'column': '[全局]',
-                'value': '',
-                'type': 'duplicate',
-                'detail': '与其他行重复',
+                '问卷名': survey.name,
+                '字段': '[全局]',
+                '行号': idx + 2,
+                '异常类型': '重复行',
+                '实际值': '',
+                '说明': '与其他行重复',
             })
     
     click.echo(f"\n发现 {len(anomalies)} 个异常:")
     for a in anomalies[:20]:
-        click.echo(f"  第{a['row']}行 [{a['column']}]: {a['type']} - {a.get('value', '')}")
+        click.echo(f"  第{a['行号']}行 [{a['字段']}]: {a['异常类型']} - {a.get('实际值', '')}")
     
     if len(anomalies) > 20:
         click.echo(f"  ... 还有 {len(anomalies) - 20} 条异常")
+    elif len(anomalies) == 0:
+        click.echo("  无异常数据")
     
-    if output and not preview and anomalies:
+    if output and not preview:
         out_path = Path(output)
         out_path.parent.mkdir(parents=True, exist_ok=True)
         
+        if len(anomalies) > 0:
+            out_df = pd.DataFrame(anomalies, columns=['问卷名', '字段', '行号', '异常类型', '实际值', '说明'])
+        else:
+            out_df = pd.DataFrame(columns=['问卷名', '字段', '行号', '异常类型', '实际值', '说明'])
+        
         if out_path.suffix in ['.xlsx', '.xls']:
-            pd.DataFrame(anomalies).to_excel(out_path, index=False)
+            out_df.to_excel(out_path, index=False)
         else:
             with open(out_path, 'w', encoding='utf-8') as f:
                 json.dump({
@@ -181,7 +194,8 @@ def report_anomalies(ctx, survey_id: str, output: Path, numeric_only: bool, zsco
                     'anomalies': anomalies,
                 }, f, ensure_ascii=False, indent=2)
         
-        click.echo(f"\n异常清单已保存: {out_path}")
+        status = f"{len(anomalies)} 条异常" if len(anomalies) > 0 else "无异常"
+        click.echo(f"\n异常清单已保存: {out_path} ({status})")
 
 
 @report_group.command('summary')

@@ -254,11 +254,18 @@ def export_logs(ctx, output: Path, limit: int, command: str, survey: str, start:
     
     click.echo(f"\n共 {len(logs)} 条日志记录")
     
-    if output and logs:
+    if output:
         out_path = Path(output)
         out_path.parent.mkdir(parents=True, exist_ok=True)
         
-        if format == 'json':
+        if out_path.suffix in ['.xlsx', '.xls']:
+            actual_format = 'xlsx'
+        elif out_path.suffix == '.csv':
+            actual_format = 'csv'
+        else:
+            actual_format = format
+        
+        if actual_format == 'json':
             with open(out_path, 'w', encoding='utf-8') as f:
                 json.dump(logs, f, ensure_ascii=False, indent=2)
         else:
@@ -269,18 +276,21 @@ def export_logs(ctx, output: Path, limit: int, command: str, survey: str, start:
                     '时间': log.get('timestamp', ''),
                     '命令': log.get('command', ''),
                     '参数': json.dumps(log.get('params', {}), ensure_ascii=False),
-                    '输入行数': log.get('input_row_count', ''),
-                    '输出行数': log.get('output_row_count', ''),
-                    '影响行数': log.get('affected_rows', ''),
+                    '输入行数': log.get('input_row_count', None),
+                    '输出行数': log.get('output_row_count', None),
+                    '影响行数': log.get('affected_rows', None),
                     '修改字段': ', '.join(log.get('modified_columns', [])),
                     '变更摘要': '; '.join(log.get('changes', [])),
                 }
                 rows.append(row)
             
-            df = pd.DataFrame(rows)
-            if format == 'xlsx':
-                df.to_excel(out_path, index=False)
+            columns = ['时间', '命令', '参数', '输入行数', '输出行数', '影响行数', '修改字段', '变更摘要']
+            df = pd.DataFrame(rows, columns=columns)
+            
+            if actual_format == 'xlsx':
+                df.to_excel(out_path, index=False, engine='openpyxl')
             else:
                 df.to_csv(out_path, index=False, encoding='utf-8-sig')
         
-        click.echo(f"日志已导出到: {out_path}")
+        status = f"{len(logs)} 条" if len(logs) > 0 else "空"
+        click.echo(f"日志已导出到: {out_path} ({status})")

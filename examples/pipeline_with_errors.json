@@ -1,0 +1,34 @@
+{
+  "name": "错误配置测试流水线",
+  "description": "包含各种错误的流水线，用于测试错误处理",
+  "project_name": "错误测试项目",
+  "steps": [
+    {
+      "command": "import",
+      "subcommand": "table",
+      "description": "导入正确的问卷数据",
+      "params": {
+        "file_path": "examples/test_empty_placeholders.csv",
+        "survey_name": "测试数据"
+      }
+    },
+    {
+      "command": "clean",
+      "subcommand": "date",
+      "description": "清洗不存在的列",
+      "params": {
+        "survey_name": "测试数据",
+        "column": "不存在的日期列"
+      }
+    },
+    {
+      "command": "mask",
+      "subcommand": "name",
+      "description": "这一步不会被执行",
+      "params": {
+        "survey_name": "测试数据",
+        "column": "姓名"
+      }
+    }
+  ]
+}

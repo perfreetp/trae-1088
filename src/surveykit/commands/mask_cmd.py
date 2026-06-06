@@ -40,9 +40,15 @@ def mask_name_cmd(ctx, survey_id: str, column: str, new_column: str):
         return
     
     target_col = new_column or column
+    input_rows = len(df)
+    
+    before = df[column].copy()
     df[target_col] = df[column].apply(mask_name)
+    changed_mask = before.astype(str) != df[target_col].astype(str)
+    changed_count = int(changed_mask.sum())
     
     click.echo(f"姓名脱敏: {column} -> {target_col}")
+    click.echo(f"  共处理 {input_rows} 条记录, 影响 {changed_count} 行")
     sample = df[[column, target_col]].head(10)
     for _, row in sample.iterrows():
         val = row[column]
@@ -71,10 +77,16 @@ def mask_name_cmd(ctx, survey_id: str, column: str, new_column: str):
             params={'survey': survey_id, 'column': column, 'new_column': new_column},
             input_files=[str(survey.source_path)],
             output_files=[],
-            changes=[f"姓名脱敏: {column}"],
+            changes=[f"姓名脱敏: {column}, 影响 {changed_count} 行"],
+            input_row_count=input_rows,
+            output_row_count=input_rows,
+            modified_columns=[target_col],
+            affected_rows=changed_count,
         )
         ws.add_log(log)
-        click.echo(f"\n已更新问卷: {survey.name}{' (预览模式，未保存)' if preview else ''}")
+        click.echo(f"\n已更新问卷: {survey.name}")
+    else:
+        click.echo(f"\n(预览模式，未保存)")
 
 
 @mask_group.command('phone')
@@ -101,9 +113,15 @@ def mask_phone_cmd(ctx, survey_id: str, column: str, new_column: str):
         return
     
     target_col = new_column or column
+    input_rows = len(df)
+    
+    before = df[column].copy()
     df[target_col] = df[column].apply(mask_phone)
+    changed_mask = before.astype(str) != df[target_col].astype(str)
+    changed_count = int(changed_mask.sum())
     
     click.echo(f"手机号脱敏: {column} -> {target_col}")
+    click.echo(f"  共处理 {input_rows} 条记录, 影响 {changed_count} 行")
     sample = df[[column, target_col]].head(10)
     for _, row in sample.iterrows():
         val = row[column]
@@ -132,10 +150,16 @@ def mask_phone_cmd(ctx, survey_id: str, column: str, new_column: str):
             params={'survey': survey_id, 'column': column, 'new_column': new_column},
             input_files=[str(survey.source_path)],
             output_files=[],
-            changes=[f"手机号脱敏: {column}"],
+            changes=[f"手机号脱敏: {column}, 影响 {changed_count} 行"],
+            input_row_count=input_rows,
+            output_row_count=input_rows,
+            modified_columns=[target_col],
+            affected_rows=changed_count,
         )
         ws.add_log(log)
-        click.echo(f"\n已更新问卷: {survey.name}{' (预览模式，未保存)' if preview else ''}")
+        click.echo(f"\n已更新问卷: {survey.name}")
+    else:
+        click.echo(f"\n(预览模式，未保存)")
 
 
 @mask_group.command('idcard')
@@ -162,9 +186,15 @@ def mask_idcard_cmd(ctx, survey_id: str, column: str, new_column: str):
         return
     
     target_col = new_column or column
+    input_rows = len(df)
+    
+    before = df[column].copy()
     df[target_col] = df[column].apply(mask_id_card)
+    changed_mask = before.astype(str) != df[target_col].astype(str)
+    changed_count = int(changed_mask.sum())
     
     click.echo(f"身份证号脱敏: {column} -> {target_col}")
+    click.echo(f"  共处理 {input_rows} 条记录, 影响 {changed_count} 行")
     sample = df[[column, target_col]].head(10)
     for _, row in sample.iterrows():
         val = row[column]
@@ -193,10 +223,16 @@ def mask_idcard_cmd(ctx, survey_id: str, column: str, new_column: str):
             params={'survey': survey_id, 'column': column, 'new_column': new_column},
             input_files=[str(survey.source_path)],
             output_files=[],
-            changes=[f"身份证号脱敏: {column}"],
+            changes=[f"身份证号脱敏: {column}, 影响 {changed_count} 行"],
+            input_row_count=input_rows,
+            output_row_count=input_rows,
+            modified_columns=[target_col],
+            affected_rows=changed_count,
         )
         ws.add_log(log)
-        click.echo(f"\n已更新问卷: {survey.name}{' (预览模式，未保存)' if preview else ''}")
+        click.echo(f"\n已更新问卷: {survey.name}")
+    else:
+        click.echo(f"\n(预览模式，未保存)")
 
 
 @mask_group.command('all')
